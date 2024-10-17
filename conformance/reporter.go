@@ -472,6 +472,8 @@ func newHTMLReporter(htmlReportFilename string) (h *HTMLReporter) {
 		titlePush:              true,
 		titleContentDiscovery:  true,
 		titleContentManagement: true,
+        titleManifest: true,
+        titleIndex: true,
 	}
 
 	if os.Getenv(envVarHideSkippedWorkflows) == "1" {
@@ -480,6 +482,8 @@ func newHTMLReporter(htmlReportFilename string) (h *HTMLReporter) {
 			titlePush:              !userDisabled(push),
 			titleContentDiscovery:  !userDisabled(contentDiscovery),
 			titleContentManagement: !userDisabled(contentManagement),
+			titleManifest:  !userDisabled(imManifest),
+			titleIndex: !userDisabled(imList),
 		}
 	}
 

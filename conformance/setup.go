@@ -13,12 +13,16 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 
 	"github.com/bloodorangeio/reggie"
 	"github.com/google/uuid"
 	g "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/ginkgo/v2/formatter"
 	godigest "github.com/opencontainers/go-digest"
+	"github.com/regclient/regclient"
+	"github.com/regclient/regclient/config"
+	"github.com/regclient/regclient/types/ref"
 )
 
 type (
@@ -39,6 +43,8 @@ const (
 	push
 	contentDiscovery
 	contentManagement
+    imManifest
+    imList
 	numWorkflows
 
 	BLOB_UNKNOWN = iota
@@ -85,6 +91,8 @@ const (
 	titlePush              = "Push"
 	titleContentDiscovery  = "Content Discovery"
 	titleContentManagement = "Content Management"
+    titleManifest = "Manifest Content"
+    titleIndex = "Manifest Index Content"
 
 	//	layerBase64String is a base64 encoding of a simple tarball, obtained like this:
 	//		$ echo 'you bothered to find out what was in here. Congratulations!' > test.txt
@@ -169,7 +177,27 @@ var (
 	manifests                          []TestBlob
 	seed                               int64
 	Version                            = "unknown"
+	regctlClient                       *regclient.RegClient
+	imReference                        ref.Ref
 )
+
+func ignoreError[T any](val T, _ error) T {
+	return val
+}
+
+func loginToRegistry(host string, user string, password string, tls bool) *regclient.RegClient {
+	configHost := config.Host{
+		Name: host,
+		User: user,
+		Pass: password,
+	}
+
+	if !tls {
+		configHost.TLS = config.TLSDisabled
+	}
+
+	return regclient.New(regclient.WithConfigHost(configHost))
+}
 
 func init() {
 	var err error
@@ -192,6 +220,11 @@ func init() {
 			testsToRun |= enableTest
 		}
 	}
+
+	regctlClient = loginToRegistry(hostname, username, password, !strings.HasPrefix(hostname, "http://"))
+
+	imHostname := strings.Replace(strings.Replace(hostname, "http://", "", 1), "https://", "", 1)
+	imReference, err = ref.New(imHostname + "/" + namespace + ":demo")
 
 	httpWriter = newHTTPDebugWriter(debug)
 	logger := newHTTPDebugLogger(httpWriter)
