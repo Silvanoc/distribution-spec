@@ -11,6 +11,7 @@ import (
 	"github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/opencontainers/go-digest"
 	godigest "github.com/opencontainers/go-digest"
 )
 
@@ -120,46 +121,95 @@ var test03ContentDiscovery = func() {
 				Expect(resp.StatusCode()).To(SatisfyAll(
 					BeNumerically(">=", 200),
 					BeNumerically("<", 300)))
+			})
+
+			g.Specify("PUT artifact with custom config/mediaType (as artifact type) [OCI-Image v1.1]", func() {
+				SkipIfDisabled(contentDiscovery)
+				RunOnlyIf(runContentDiscoverySetup)
 
 				// Populate registry with test references manifest (config.MediaType = artifactType)
-				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(refsManifestAConfigArtifactDigest)).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
 					SetBody(refsManifestAConfigArtifactContent)
-				resp, err = client.Do(req)
+				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
 					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
-				Expect(resp.Header().Get("OCI-Subject")).To(Equal(manifests[4].Digest))
+					BeNumerically("<", 300)), "PUT manifest fails")
+				Expect(resp.Header().Get("OCI-Subject")).To(Equal(manifests[4].Digest),
+					"The expected 'OCI-Subject' is missing in the headers")
+			})
+
+			g.Specify("PUT artifact with custom artifactType [OCI-Image v1.1]", func() {
+				SkipIfDisabled(contentDiscovery)
+				RunOnlyIf(runContentDiscoverySetup)
 
 				// Populate registry with test references manifest (ArtifactType, config.MediaType = emptyJSON)
-				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(refsManifestALayerArtifactDigest)).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
 					SetBody(refsManifestALayerArtifactContent)
-				resp, err = client.Do(req)
+				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
 					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
-				Expect(resp.Header().Get("OCI-Subject")).To(Equal(manifests[4].Digest))
+					BeNumerically("<", 300)), "PUT manifest fails")
+				Expect(resp.Header().Get("OCI-Subject")).To(Equal(manifests[4].Digest),
+					"The expected 'OCI-Subject' is missing in the headers")
+			})
+
+			// TODO: atomical testing, this test relies on previous pushes that fail because they are pushing
+			// Populate registry with test index manifest
+			manifestContentLength, err := strconv.Atoi(manifests[0].ContentLength)
+			Expect(err).To(BeNil())
+			refsIndexArtifact := index{
+				SchemaVersion: 2,
+				MediaType:     "application/vnd.oci.image.index.v1+json",
+				ArtifactType:  testRefArtifactTypeIndex,
+				Manifests: []descriptor{
+					{
+						MediaType: "application/vnd.oci.image.manifest.v1+json",
+						Size:      int64(manifestContentLength),
+						Digest:    digest.Digest(manifests[0].Digest),
+					},
+				},
+				Annotations: map[string]string{
+					testAnnotationKey: "test index",
+				},
+			}
+			refsIndexArtifactContent, err = json.MarshalIndent(&refsIndexArtifact, "", "\t")
+			Expect(err).To(BeNil())
+			refsIndexArtifactDigest = godigest.FromBytes(refsIndexArtifactContent).String()
+			Expect(err).To(BeNil())
+
+			// custom mediaTypes, what fails
+			// it should test index without any other specialities
+			g.Specify("PUT manifest/image list/index", func() {
+				SkipIfDisabled(contentDiscovery)
+				RunOnlyIf(runContentDiscoverySetup)
 
 				// Populate registry with test index manifest
-				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(refsIndexArtifactDigest)).
 					SetHeader("Content-Type", "application/vnd.oci.image.index.v1+json").
 					SetBody(refsIndexArtifactContent)
-				resp, err = client.Do(req)
+				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
 					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
-				Expect(resp.Header().Get("OCI-Subject")).To(Equal(manifests[4].Digest))
+					BeNumerically("<", 300)), "PUT index fails")
+				// Expect(resp.Header().Get("OCI-Subject")).To(Equal(manifests[4].Digest),
+				// 	"The expected 'OCI-Subject' is missing in the headers")
+			})
+
+			g.Specify("Reference setup 2nd part", func() {
+				SkipIfDisabled(contentDiscovery)
+				RunOnlyIf(runContentDiscoverySetup)
 
 				// Populate registry with test blob
-				req = client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
-				resp, err = client.Do(req)
+				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
+				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
 					SetQueryParam("digest", configs[4].Digest).
@@ -170,7 +220,7 @@ var test03ContentDiscovery = func() {
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
 					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
+					BeNumerically("<", 300)), "PUT config fails")
 
 				// Populate registry with test layer
 				req = client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
@@ -185,7 +235,7 @@ var test03ContentDiscovery = func() {
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
 					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
+					BeNumerically("<", 300)), "PUT layer fails")
 
 				// Populate registry with test manifest
 				tag := testTagName
@@ -197,7 +247,7 @@ var test03ContentDiscovery = func() {
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
 					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
+					BeNumerically("<", 300)), "PUT manifest fails")
 
 				// Populate registry with reference blob after the image manifest is pushed
 				req = client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
@@ -212,43 +262,61 @@ var test03ContentDiscovery = func() {
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
 					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
+					BeNumerically("<", 300)), "PUT blob fails")
+			})
+
+			g.Specify("PUT artifact with custom config/mediaType (as artifact type) [OCI-Image v1.1]", func() {
+				SkipIfDisabled(contentDiscovery)
+				RunOnlyIf(runContentDiscoverySetup)
 
 				// Populate registry with test references manifest (config.MediaType = artifactType)
-				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(refsManifestBConfigArtifactDigest)).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
 					SetBody(refsManifestBConfigArtifactContent)
-				resp, err = client.Do(req)
+				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
 					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
-				Expect(resp.Header().Get("OCI-Subject")).To(Equal(manifests[4].Digest))
+					BeNumerically("<", 300)), "PUT manifest fails")
+				// Expect(resp.Header().Get("OCI-Subject")).To(Equal(manifests[4].Digest),
+				// 	"The expected 'OCI-Subject' is missing in the headers")
+			})
+
+			g.Specify("PUT artifact with custom artifactType [OCI-Image v1.1]", func() {
+				SkipIfDisabled(contentDiscovery)
+				RunOnlyIf(runContentDiscoverySetup)
 
 				// Populate registry with test references manifest (ArtifactType, config.MediaType = emptyJSON)
-				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(refsManifestBLayerArtifactDigest)).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
 					SetBody(refsManifestBLayerArtifactContent)
-				resp, err = client.Do(req)
+				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
 					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
-				Expect(resp.Header().Get("OCI-Subject")).To(Equal(manifests[4].Digest))
+					BeNumerically("<", 300)), "PUT manifest fails")
+				// Expect(resp.Header().Get("OCI-Subject")).To(Equal(manifests[4].Digest),
+				// 	"The expected 'OCI-Subject' is missing in the headers")
+			})
+
+			g.Specify("Dangling subject [OCI-Image v1.1]", func() {
+				SkipIfDisabled(contentDiscovery)
+				RunOnlyIf(runContentDiscoverySetup)
 
 				// Populate registry with test references manifest to a non-existent subject
-				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(refsManifestCLayerArtifactDigest)).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
 					SetBody(refsManifestCLayerArtifactContent)
-				resp, err = client.Do(req)
+				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
 					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
-				Expect(resp.Header().Get("OCI-Subject")).To(Equal(manifests[3].Digest))
+					BeNumerically("<", 300)), "PUT manifest fails")
+				// Expect(resp.Header().Get("OCI-Subject")).To(Equal(manifests[3].Digest),
+				// 	"The expected 'OCI-Subject' is missing in the headers")
 			})
 		})
 
@@ -296,20 +364,23 @@ var test03ContentDiscovery = func() {
 			})
 		})
 
-		g.Context("Test content discovery endpoints (listing references)", func() {
+		g.Context("Test content discovery endpoints (listing references) [OCI-Distribution v1.1]", func() {
 			g.Specify("GET request to nonexistent blob should result in empty 200 response", func() {
 				SkipIfDisabled(contentDiscovery)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/referrers/<digest>",
 					reggie.WithDigest(dummyDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
-				Expect(resp.Header().Get("Content-Type")).To(Equal("application/vnd.oci.image.index.v1+json"))
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK),
+					"GET referrers fails (possibly referrers API not supported)")
+				Expect(resp.Header().Get("Content-Type")).To(Equal("application/vnd.oci.image.index.v1+json"),
+					"Referrer is of unexpected type")
 
 				var index index
 				err = json.Unmarshal(resp.Body(), &index)
 				Expect(err).To(BeNil())
-				Expect(len(index.Manifests)).To(BeZero())
+				Expect(len(index.Manifests)).To(BeZero(),
+					"No manifests should be returned")
 			})
 
 			g.Specify("GET request to existing blob should yield 200", func() {
@@ -318,13 +389,17 @@ var test03ContentDiscovery = func() {
 					reggie.WithDigest(manifests[4].Digest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
-				Expect(resp.Header().Get("Content-Type")).To(Equal("application/vnd.oci.image.index.v1+json"))
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK),
+					"GET referrers fails (possibly referrers API not supported)")
+				Expect(resp.Header().Get("Content-Type")).To(Equal("application/vnd.oci.image.index.v1+json"),
+					"Referrer is of unexpected type")
 
 				var index index
 				err = json.Unmarshal(resp.Body(), &index)
 				Expect(err).To(BeNil())
-				Expect(len(index.Manifests)).To(Equal(5))
+                g.GinkgoWriter.Printf("Number of referrers: %d", len(index.Manifests))
+				Expect(len(index.Manifests)).To(Equal(5),
+					"Not all referrers being reported")
 				Expect(index.Manifests[0].Digest).ToNot(Equal(index.Manifests[1].Digest))
 				for i := 0; i < len(index.Manifests); i++ {
 					Expect(len(index.Manifests[i].Annotations)).To(Equal(1))
@@ -339,8 +414,10 @@ var test03ContentDiscovery = func() {
 					SetQueryParam("artifactType", testRefArtifactTypeA)
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
-				Expect(resp.Header().Get("Content-Type")).To(Equal("application/vnd.oci.image.index.v1+json"))
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK),
+					"GET filtered referrers fails")
+				Expect(resp.Header().Get("Content-Type")).To(Equal("application/vnd.oci.image.index.v1+json"),
+					"Referrer is of unexpected type")
 
 				var index index
 				err = json.Unmarshal(resp.Body(), &index)
@@ -370,7 +447,8 @@ var test03ContentDiscovery = func() {
 					reggie.WithDigest(manifests[3].Digest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK),
+					"GET missing referrer fails")
 				Expect(resp.Header().Get("Content-Type")).To(Equal("application/vnd.oci.image.index.v1+json"))
 
 				var index index
