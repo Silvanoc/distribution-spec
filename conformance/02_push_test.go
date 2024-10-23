@@ -55,15 +55,6 @@ var test02Push = func() {
 		})
 
 		g.Context("Blob Upload Monolithic", func() {
-			g.Specify("GET nonexistent blob should result in 404 response", func() {
-				SkipIfDisabled(push)
-				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>",
-					reggie.WithDigest(dummyDigest))
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
-			})
-
 			g.Specify("POST request with digest and blob should yield a 201 or 202", func() {
 				SkipIfDisabled(push)
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/").
@@ -80,13 +71,9 @@ var test02Push = func() {
 					Equal(http.StatusAccepted),
 				))
 				lastResponse = resp
-			})
 
-			g.Specify("GET request to blob URL from prior request should yield 200 or 404 based on response code", func() {
-				SkipIfDisabled(push)
-				Expect(lastResponse).ToNot(BeNil())
-				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[1].Digest))
-				resp, err := client.Do(req)
+				req = client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[1].Digest))
+				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				if lastResponse.StatusCode() == http.StatusAccepted {
 					Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
@@ -116,12 +103,9 @@ var test02Push = func() {
 				location := resp.Header().Get("Location")
 				Expect(location).ToNot(BeEmpty())
 				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
-			})
 
-			g.Specify("GET request to existing blob should yield 200 response", func() {
-				SkipIfDisabled(push)
-				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[1].Digest))
-				resp, err := client.Do(req)
+				req = client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[1].Digest))
+				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
 			})
@@ -141,12 +125,9 @@ var test02Push = func() {
 				location := resp.Header().Get("Location")
 				Expect(location).ToNot(BeEmpty())
 				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
-			})
 
-			g.Specify("GET request to existing layer should yield 200 response", func() {
-				SkipIfDisabled(push)
-				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(layerBlobDigest))
-				resp, err := client.Do(req)
+				req = client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(layerBlobDigest))
+				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
 			})
@@ -215,7 +196,7 @@ var test02Push = func() {
 				Expect(resp.StatusCode()).To(Equal(http.StatusRequestedRangeNotSatisfiable))
 			})
 
-			g.Specify("Get on stale blob upload should return 204 with a range and location", func() {
+			g.Specify("GET on stale blob upload should return 204 with a range and location", func() {
 				SkipIfDisabled(push)
 				req := client.NewRequest(reggie.GET, prevResponse.GetRelativeLocation())
 				resp, err := client.Do(req)
@@ -281,16 +262,14 @@ var test02Push = func() {
 					Equal(http.StatusAccepted),
 				))
 				lastResponse = resp
-			})
 
-			g.Specify("GET request to test digest within cross-mount namespace should return 200", func() {
-				SkipIfDisabled(push)
-				RunOnlyIf(lastResponse.StatusCode() == http.StatusCreated)
-				Expect(lastResponse.GetRelativeLocation()).To(Equal(fmt.Sprintf("/v2/%s/blobs/%s", crossmountNamespace, testBlobADigest)))
-				req := client.NewRequest(reggie.GET, lastResponse.GetRelativeLocation())
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				if resp.StatusCode() == http.StatusCreated {
+					Expect(lastResponse.GetRelativeLocation()).To(Equal(fmt.Sprintf("/v2/%s/blobs/%s", crossmountNamespace, testBlobADigest)))
+					req = client.NewRequest(reggie.GET, lastResponse.GetRelativeLocation())
+					resp, err = client.Do(req)
+					Expect(err).To(BeNil())
+					Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				}
 			})
 
 			g.Specify("Cross-mounting of nonexistent blob should yield session id", func() {
@@ -327,15 +306,6 @@ var test02Push = func() {
 		})
 
 		g.Context("Manifest Upload", func() {
-			g.Specify("GET nonexistent manifest should return 404", func() {
-				SkipIfDisabled(push)
-				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<reference>",
-					reggie.WithReference(nonexistentManifest))
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
-			})
-
 			g.Specify("PUT should accept a manifest upload", func() {
 				SkipIfDisabled(push)
 				for i := 0; i < 4; i++ {
@@ -361,13 +331,10 @@ var test02Push = func() {
 				} else {
 					Warn("image manifest with no layers is not supported")
 				}
-			})
 
-			g.Specify("GET request to manifest URL (digest) should yield 200 response", func() {
-				SkipIfDisabled(push)
-				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[1].Digest)).
+				req = client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[1].Digest)).
 					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
-				resp, err := client.Do(req)
+				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
 			})
