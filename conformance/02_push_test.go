@@ -1,6 +1,7 @@
 package conformance
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -9,16 +10,65 @@ import (
 	"github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/opencontainers/go-digest"
+	godigest "github.com/opencontainers/go-digest"
+)
+
+const (
+	deleteConfigTypeManifest = 1 << iota
+	deleteArtifactTypeManifest
+	deleteEmptyLayerManifest
+	deleteEmptyJSONBlob
 )
 
 var test02Push = func() {
 	g.Context(titlePush, func() {
 
 		var lastResponse, prevResponse *reggie.Response
-		var emptyLayerManifestRef string
+		var manifestsToDelete = 0
 
 		g.Context("Setup", func() {
-			// No setup required at this time for push tests
+			g.Specify("Upload empty JSON blob needed for further tests", func() {
+				SkipIfDisabled(push)
+				RunOnlyIf(runPushSetup)
+
+				// Populate registry with empty JSON blob
+				// validate expected empty JSON blob digest
+				Expect(emptyJSONDescriptor.Digest).To(Equal(godigest.Digest("sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a")))
+				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
+					SetQueryParam("digest", emptyJSONDescriptor.Digest.String()).
+					SetHeader("Content-Type", "application/octet-stream").
+					SetHeader("Content-Length", fmt.Sprintf("%d", emptyJSONDescriptor.Size)).
+					SetBody(emptyJSONBlob)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)))
+				manifestsToDelete |= deleteEmptyJSONBlob
+			})
+
+			g.Specify("Upload blob needed for further tests", func() {
+				SkipIfDisabled(push)
+				RunOnlyIf(runPushSetup)
+				// Populate registry with reference blob before the image manifest is pushed
+				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
+					SetQueryParam("digest", testRefBlobADigest).
+					SetHeader("Content-Type", "application/octet-stream").
+					SetHeader("Content-Length", testRefBlobALength).
+					SetBody(testRefBlobA)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)))
+			})
 		})
 
 		g.Context("Blob Upload Streamed", func() {
@@ -362,9 +412,9 @@ var test02Push = func() {
 				Expect(err).To(BeNil())
 				if resp.StatusCode() == http.StatusCreated {
 					location := resp.Header().Get("Location")
-					emptyLayerManifestRef = location
 					Expect(location).ToNot(BeEmpty())
 					Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+					manifestsToDelete |= deleteEmptyLayerManifest
 				} else {
 					Warn("image manifest with no layers is not supported")
 				}
@@ -377,6 +427,160 @@ var test02Push = func() {
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+			})
+
+			g.Specify("Registry should accept a manifest upload with custom config/mediaType (as artifact type) [OCI-Image v1.1]", func() {
+				SkipIfDisabled(push)
+
+				// Populate registry with test references manifest (config.MediaType = artifactType)
+				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(refsManifestConfigTypeDigest)).
+					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+					SetBody(refsManifestConfigTypeContent)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), "PUT manifest fails")
+
+				manifestsToDelete |= deleteConfigTypeManifest
+			})
+
+			g.Specify("Registry should accept a manifest upload with custom artifactType [OCI-Image v1.1]", func() {
+				SkipIfDisabled(push)
+
+				// Populate registry with test references manifest (ArtifactType, config.MediaType = emptyJSON)
+				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(refsManifestArtifactTypeDigest)).
+					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+					SetBody(refsManifestArtifactTypeContent)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), "PUT manifest fails")
+
+				manifestsToDelete |= deleteArtifactTypeManifest
+			})
+
+			g.Specify("Registry should accept a manifest upload with image index", func() {
+				SkipIfDisabled(push)
+
+				// Populate registry with test blob
+				SkipIfDisabled(push)
+				RunOnlyIf(runPushSetup)
+				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
+					SetQueryParam("digest", configs[0].Digest).
+					SetHeader("Content-Type", "application/octet-stream").
+					SetHeader("Content-Length", configs[0].ContentLength).
+					SetBody(configs[0].Content)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)))
+
+				// Populate registry with test manifest
+				SkipIfDisabled(push)
+				RunOnlyIf(runPushSetup)
+				tag := testTagName
+				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(tag)).
+					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+					SetBody(manifests[0].Content)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)))
+				manifestContentLength, err := strconv.Atoi(manifests[0].ContentLength)
+				Expect(err).To(BeNil())
+
+				// Populate registry with test index manifest
+				refsIndexArtifact := index{
+					SchemaVersion: 2,
+					MediaType:     "application/vnd.oci.image.index.v1+json",
+					ArtifactType:  testRefArtifactTypeIndex,
+					Manifests: []descriptor{
+						{
+							MediaType: "application/vnd.oci.image.manifest.v1+json",
+							Size:      int64(manifestContentLength),
+							Digest:    digest.Digest(manifests[0].Digest),
+						},
+					},
+					Annotations: map[string]string{
+						testAnnotationKey: "test index",
+					},
+				}
+				refsIndexArtifactContent, err = json.MarshalIndent(&refsIndexArtifact, "", "\t")
+				Expect(err).To(BeNil())
+				refsIndexArtifactDigest = godigest.FromBytes(refsIndexArtifactContent).String()
+				Expect(err).To(BeNil())
+
+				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(refsIndexArtifactDigest)).
+					SetHeader("Content-Type", "application/vnd.oci.image.index.v1+json").
+					SetBody(refsIndexArtifactContent)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), "PUT index fails")
+			})
+
+			g.Specify("Registry should accept a manifest upload with nested image index [OCI-Image v1.1]", func() {
+				SkipIfDisabled(push)
+
+				// Populate registry with test index manifest
+				refsIndexArtifact2 := index{
+					SchemaVersion: 2,
+					MediaType:     "application/vnd.oci.image.index.v1+json",
+					ArtifactType:  testRefArtifactTypeIndex,
+					Manifests: []descriptor{
+						{
+							MediaType: "application/vnd.oci.image.index.v1+json",
+							Size:      int64(len(refsIndexArtifactContent)),
+							Digest:    digest.Digest(refsIndexArtifactDigest),
+						},
+					},
+					Annotations: map[string]string{
+						testAnnotationKey: "test index",
+					},
+				}
+				refsIndexArtifactContent2, err := json.MarshalIndent(&refsIndexArtifact2, "", "\t")
+				Expect(err).To(BeNil())
+				refsIndexArtifactDigest2 := godigest.FromBytes(refsIndexArtifactContent2).String()
+				Expect(err).To(BeNil())
+
+				// Populate registry with test index manifest
+				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(refsIndexArtifactDigest2)).
+					SetHeader("Content-Type", "application/vnd.oci.image.index.v1+json").
+					SetBody(refsIndexArtifactContent2)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), "PUT index fails")
+			})
+
+			g.Specify("Dangling subject [OCI-Image v1.1]", func() {
+				SkipIfDisabled(push)
+
+				// Populate registry with test references manifest to a non-existent subject
+				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(refsManifestCLayerArtifactDigest)).
+					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+					SetBody(refsManifestCLayerArtifactContent)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), "PUT manifest with 'dangling' subject fails, but must not")
+				Expect(resp.Header().Get("OCI-subject")).To(MatchRegexp(`^[a-f0-9]+:[a-f0-9]+$`), "PUT manifest with subject does not return a header 'OCI_subject' with the subject digest")
 			})
 		})
 
@@ -395,7 +599,32 @@ var test02Push = func() {
 						),
 						Equal(http.StatusMethodNotAllowed),
 					))
-					if emptyLayerManifestRef != "" {
+					g.GinkgoWriter.Printf("Bitmask manifestsToDelete: %d\n", manifestsToDelete)
+					if manifestsToDelete&deleteConfigTypeManifest != 0 {
+						req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(refsManifestConfigTypeDigest))
+						resp, err = client.Do(req)
+						Expect(err).To(BeNil())
+						Expect(resp.StatusCode()).To(SatisfyAny(
+							SatisfyAll(
+								BeNumerically(">=", 200),
+								BeNumerically("<", 300),
+							),
+							Equal(http.StatusMethodNotAllowed),
+						))
+					}
+					if manifestsToDelete&deleteArtifactTypeManifest != 0 {
+						req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(refsManifestArtifactTypeDigest))
+						resp, err = client.Do(req)
+						Expect(err).To(BeNil())
+						Expect(resp.StatusCode()).To(SatisfyAny(
+							SatisfyAll(
+								BeNumerically(">=", 200),
+								BeNumerically("<", 300),
+							),
+							Equal(http.StatusMethodNotAllowed),
+						))
+					}
+					if manifestsToDelete&deleteEmptyLayerManifest != 0 {
 						req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>", reggie.WithReference(emptyLayerManifestDigest))
 						resp, err = client.Do(req)
 						Expect(err).To(BeNil())
@@ -429,6 +658,7 @@ var test02Push = func() {
 			g.Specify("Delete layer blob created in setup", func() {
 				SkipIfDisabled(push)
 				RunOnlyIf(runPushSetup)
+
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(layerBlobDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
@@ -440,6 +670,20 @@ var test02Push = func() {
 					Equal(http.StatusNotFound),
 					Equal(http.StatusMethodNotAllowed),
 				))
+
+				if manifestsToDelete&deleteEmptyJSONBlob != 0 {
+					req = client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(emptyJSONDescriptor.Digest.String()))
+					resp, err = client.Do(req)
+					Expect(err).To(BeNil())
+					Expect(resp.StatusCode()).To(SatisfyAny(
+						SatisfyAll(
+							BeNumerically(">=", 200),
+							BeNumerically("<", 300),
+						),
+						Equal(http.StatusNotFound),
+						Equal(http.StatusMethodNotAllowed),
+					))
+				}
 			})
 
 			if !deleteManifestBeforeBlobs {
@@ -456,7 +700,7 @@ var test02Push = func() {
 						),
 						Equal(http.StatusMethodNotAllowed),
 					))
-					if emptyLayerManifestRef != "" {
+					if manifestsToDelete&deleteEmptyLayerManifest != 0 {
 						req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>", reggie.WithReference(emptyLayerManifestDigest))
 						resp, err = client.Do(req)
 						Expect(err).To(BeNil())
