@@ -151,6 +151,10 @@ var (
 	refsManifestBLayerArtifactDigest   string
 	refsManifestCLayerArtifactContent  []byte
 	refsManifestCLayerArtifactDigest   string
+	refsManifestConfigTypeContent      []byte
+	refsManifestConfigTypeDigest       string
+	refsManifestArtifactTypeContent    []byte
+	refsManifestArtifactTypeDigest     string
 	refsIndexArtifactContent           []byte
 	refsIndexArtifactDigest            string
 	reportJUnitFilename                string
@@ -489,6 +493,57 @@ func init() {
 	}
 
 	refsManifestCLayerArtifactDigest = godigest.FromBytes(refsManifestCLayerArtifactContent).String()
+
+	// artifact using config.MediaType = artifactType
+	refsManifestConfigType := manifest{
+		SchemaVersion: 2,
+		MediaType:     "application/vnd.oci.image.manifest.v1+json",
+		Config: descriptor{
+			MediaType: testRefArtifactTypeA,
+			Size:      int64(len(testRefBlobA)),
+			Digest:    godigest.FromBytes(testRefBlobA),
+		},
+		Layers: []descriptor{
+			emptyJSONDescriptor,
+		},
+		Annotations: map[string]string{
+			testAnnotationKey: "test config a",
+		},
+	}
+
+	refsManifestConfigTypeContent, err = json.MarshalIndent(&refsManifestConfigType, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	refsManifestConfigTypeDigest = godigest.FromBytes(refsManifestConfigTypeContent).String()
+	testAnnotationValues[refsManifestConfigTypeDigest] = refsManifestConfigType.Annotations[testAnnotationKey]
+
+	// artifact with Subject ref using ArtifactType, config.MediaType = emptyJSON
+	refsManifestArtifactType := manifest{
+		SchemaVersion: 2,
+		MediaType:     "application/vnd.oci.image.manifest.v1+json",
+		ArtifactType:  testRefArtifactTypeA,
+		Config:        emptyJSONDescriptor,
+		Layers: []descriptor{
+			{
+				MediaType: testRefArtifactTypeA,
+				Size:      int64(len(testRefBlobA)),
+				Digest:    godigest.FromBytes(testRefBlobA),
+			},
+		},
+		Annotations: map[string]string{
+			testAnnotationKey: "test layer a",
+		},
+	}
+
+	refsManifestArtifactTypeContent, err = json.MarshalIndent(&refsManifestArtifactType, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	refsManifestArtifactTypeDigest = godigest.FromBytes(refsManifestArtifactTypeContent).String()
+	testAnnotationValues[refsManifestArtifactTypeDigest] = refsManifestArtifactType.Annotations[testAnnotationKey]
 
 	testRefArtifactTypeIndex = "application/vnd.food.stand"
 	refsIndexArtifact := index{
