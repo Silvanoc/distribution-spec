@@ -151,6 +151,8 @@ var (
 	refsManifestBLayerArtifactDigest   string
 	refsManifestCLayerArtifactContent  []byte
 	refsManifestCLayerArtifactDigest   string
+	refsManifestConfigTypeContent      []byte
+	refsManifestConfigTypeDigest       string
 	refsIndexArtifactContent           []byte
 	refsIndexArtifactDigest            string
 	reportJUnitFilename                string
@@ -489,6 +491,31 @@ func init() {
 	}
 
 	refsManifestCLayerArtifactDigest = godigest.FromBytes(refsManifestCLayerArtifactContent).String()
+
+	// artifact using config.MediaType = artifactType
+	refsManifestConfigType := manifest{
+		SchemaVersion: 2,
+		MediaType:     "application/vnd.oci.image.manifest.v1+json",
+		Config: descriptor{
+			MediaType: testRefArtifactTypeA,
+			Size:      int64(len(testRefBlobA)),
+			Digest:    godigest.FromBytes(testRefBlobA),
+		},
+		Layers: []descriptor{
+			emptyJSONDescriptor,
+		},
+		Annotations: map[string]string{
+			testAnnotationKey: "test config a",
+		},
+	}
+
+	refsManifestConfigTypeContent, err = json.MarshalIndent(&refsManifestConfigType, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	refsManifestConfigTypeDigest = godigest.FromBytes(refsManifestConfigTypeContent).String()
+	testAnnotationValues[refsManifestConfigTypeDigest] = refsManifestConfigType.Annotations[testAnnotationKey]
 
 	testRefArtifactTypeIndex = "application/vnd.food.stand"
 	refsIndexArtifact := index{
