@@ -12,6 +12,7 @@ import (
 	"github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	godigest "github.com/opencontainers/go-digest"
 )
 
 func getErrorsInfo(resp *reggie.Response) string {
@@ -464,6 +465,38 @@ var test02Push = func() {
 			})
 		})
 
+		g.Context("Manifest Upload with custom artifactType", func() {
+			g.Specify("Registry should accept a manifest upload with custom artifactType [OCI-Image v1.1]", func() {
+				SkipIfDisabled(push)
+
+				// Populate registry with empty JSON blob
+				Expect(emptyJSONDescriptor.Digest).To(Equal(godigest.Digest("sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a")))
+				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
+					SetQueryParam("digest", emptyJSONDescriptor.Digest.String()).
+					SetHeader("Content-Type", "application/octet-stream").
+					SetHeader("Content-Length", fmt.Sprintf("%d", emptyJSONDescriptor.Size)).
+					SetBody(emptyJSONBlob)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), getErrorsInfo(resp))
+
+				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(refsManifestArtifactTypeDigest)).
+					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+					SetBody(refsManifestArtifactTypeContent)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), getErrorsInfo(resp))
+			})
+		})
+
 		g.Context("Teardown", func() {
 			if deleteManifestBeforeBlobs {
 				g.Specify("Delete manifest created in tests", func() {
@@ -493,6 +526,17 @@ var test02Push = func() {
 					}
 
 					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>", reggie.WithReference(refsManifestConfigTypeDigest))
+					resp, err = client.Do(req)
+					Expect(err).To(BeNil())
+					Expect(resp.StatusCode()).To(SatisfyAny(
+						SatisfyAll(
+							BeNumerically(">=", 200),
+							BeNumerically("<", 300),
+						),
+						Equal(http.StatusMethodNotAllowed),
+					))
+
+					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>", reggie.WithReference(refsManifestArtifactTypeDigest))
 					resp, err = client.Do(req)
 					Expect(err).To(BeNil())
 					Expect(resp.StatusCode()).To(SatisfyAny(
@@ -565,6 +609,17 @@ var test02Push = func() {
 					}
 
 					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>", reggie.WithReference(refsManifestConfigTypeDigest))
+					resp, err = client.Do(req)
+					Expect(err).To(BeNil())
+					Expect(resp.StatusCode()).To(SatisfyAny(
+						SatisfyAll(
+							BeNumerically(">=", 200),
+							BeNumerically("<", 300),
+						),
+						Equal(http.StatusMethodNotAllowed),
+					))
+
+					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>", reggie.WithReference(refsManifestArtifactTypeDigest))
 					resp, err = client.Do(req)
 					Expect(err).To(BeNil())
 					Expect(resp.StatusCode()).To(SatisfyAny(
