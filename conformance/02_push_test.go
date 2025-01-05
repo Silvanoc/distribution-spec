@@ -592,11 +592,27 @@ var test02Push = func() {
 					BeNumerically(">=", 200),
 					BeNumerically("<", 300)), getErrorsInfo(resp))
 
+				// Populate registry with test index
 				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(refsIndexArtifactDigest2)).
 					SetHeader("Content-Type", "application/vnd.oci.image.index.v1+json").
 					SetBody(refsIndexArtifactContent2)
 				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), getErrorsInfo(resp))
+			})
+
+			g.Specify("Registry should accept nested indexes [OCI-Image v1.1]", func() {
+				SkipIfDisabled(push)
+
+				// Populate registry with test index
+				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(refsIndexArtifactDigest3)).
+					SetHeader("Content-Type", "application/vnd.oci.image.index.v1+json").
+					SetBody(refsIndexArtifactContent3)
+				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
 					BeNumerically(">=", 200),
@@ -610,7 +626,8 @@ var test02Push = func() {
 					SkipIfDisabled(push)
 					RunOnlyIf(runPushSetup)
 
-					manifestDigests := []string{refsIndexArtifactDigest2, manifests[0].Digest,
+					manifestDigests := []string{refsIndexArtifactDigest3,
+						refsIndexArtifactDigest2, manifests[0].Digest,
 						manifests[1].Digest, refsManifestConfigTypeDigest,
 						refsManifestArtifactTypeDigest}
 					for _, digest := range manifestDigests {
@@ -762,7 +779,8 @@ var test02Push = func() {
 					SkipIfDisabled(push)
 					RunOnlyIf(runPushSetup)
 
-					manifestDigests := []string{refsIndexArtifactDigest2, manifests[0].Digest,
+					manifestDigests := []string{refsIndexArtifactDigest3,
+						refsIndexArtifactDigest2, manifests[0].Digest,
 						manifests[1].Digest, refsManifestConfigTypeDigest,
 						refsManifestArtifactTypeDigest, refsManifestDLayerArtifactDigest}
 					for _, digest := range manifestDigests {
