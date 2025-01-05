@@ -161,6 +161,8 @@ var (
 	refsIndexArtifactDigest            string
 	refsIndexArtifactContent2          []byte
 	refsIndexArtifactDigest2           string
+	refsIndexArtifactContent3          []byte
+	refsIndexArtifactDigest3           string
 	reportJUnitFilename                string
 	reportHTMLFilename                 string
 	httpWriter                         *httpDebugWriter
@@ -622,6 +624,26 @@ func init() {
 	}
 	refsIndexArtifactContent2, err = json.MarshalIndent(&refsIndexArtifact2, "", "\t")
 	refsIndexArtifactDigest2 = godigest.FromBytes(refsIndexArtifactContent2).String()
+
+	// refsIndexArtifactContentLength2 := strconv.Itoa(len(refsIndexArtifactContent2))
+	refsIndexArtifactContentLength2 := len(refsIndexArtifactContent2)
+	// Populate registry with test index manifest
+	refsIndexArtifact3 := index{
+		SchemaVersion: 2,
+		MediaType:     "application/vnd.oci.image.index.v1+json",
+		Manifests: []descriptor{
+			{
+				MediaType: "application/vnd.oci.image.index.v1+json",
+				Size:      int64(refsIndexArtifactContentLength2),
+				Digest:    godigest.Digest(refsIndexArtifactDigest2),
+			},
+		},
+		Annotations: map[string]string{
+			testAnnotationKey: "test index",
+		},
+	}
+	refsIndexArtifactContent3, err = json.MarshalIndent(&refsIndexArtifact3, "", "\t")
+	refsIndexArtifactDigest3 = godigest.FromBytes(refsIndexArtifactContent3).String()
 
 	dummyDigest = godigest.FromString("hello world").String()
 
