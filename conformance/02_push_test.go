@@ -54,7 +54,7 @@ func getErrorsInfo(resp *reggie.Response) string {
 var test02Push = func() {
 	g.Context(titlePush, func() {
 
-		var lastResponse, prevResponse *reggie.Response
+		var lastResponse, prevResponse, aResponse *reggie.Response
 		var emptyLayerManifestRef string
 
 		g.Context("Setup", func() {
@@ -389,6 +389,9 @@ var test02Push = func() {
 					location := resp.Header().Get("Location")
 					Expect(location).ToNot(BeEmpty())
 					Expect(resp.StatusCode()).To(Equal(http.StatusCreated), getErrorsInfo(resp))
+					if i == 0 {
+						aResponse = resp
+					}
 				}
 			})
 
@@ -497,6 +500,63 @@ var test02Push = func() {
 				Expect(resp.StatusCode()).To(SatisfyAll(
 					BeNumerically(">=", 200),
 					BeNumerically("<", 300)), getErrorsInfo(resp))
+			})
+
+		})
+
+		g.Context("Manifest Upload with subject", func() {
+			g.Specify("Registry should accept a manifest with subject [OCI-Image v1.1]", func() {
+				SkipIfDisabled(push)
+				Expect(aResponse).ToNot(BeNil())
+
+				// Populate registry with test blob
+				SkipIfDisabled(push)
+				RunOnlyIf(runPushSetup)
+				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
+					SetQueryParam("digest", configs[0].Digest).
+					SetHeader("Content-Type", "application/octet-stream").
+					SetHeader("Content-Length", configs[0].ContentLength).
+					SetBody(configs[0].Content)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), getErrorsInfo(resp))
+
+				// Populate registry with test manifest
+				SkipIfDisabled(push)
+				RunOnlyIf(runPushSetup)
+				tag := testTagName
+				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(tag)).
+					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+					SetBody(manifests[0].Content)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), getErrorsInfo(resp))
+
+				req = client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>",
+					reggie.WithDigest(manifests[0].Digest))
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
+
+				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(refsManifestDLayerArtifactDigest)).
+					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+					SetBody(refsManifestDLayerArtifactContent)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), getErrorsInfo(resp))
+				Expect(resp.Header().Get("OCI-Subject")).To(Equal(godigest.FromBytes(manifests[0].Content).String()),
+					"The expected 'OCI-Subject' is missing in the headers")
 			})
 		})
 
@@ -707,7 +767,7 @@ var test02Push = func() {
 
 					manifestDigests := []string{refsIndexArtifactDigest2, manifests[0].Digest,
 						manifests[1].Digest, refsManifestConfigTypeDigest,
-						refsManifestArtifactTypeDigest}
+						refsManifestArtifactTypeDigest, refsManifestDLayerArtifactDigest}
 					for _, digest := range manifestDigests {
 						req := client.NewRequest(reggie.DELETE,
 							"/v2/<name>/manifests/<reference>",
