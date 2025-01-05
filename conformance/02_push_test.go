@@ -549,101 +549,104 @@ var test02Push = func() {
 				g.Specify("Delete manifest created in tests", func() {
 					SkipIfDisabled(push)
 					RunOnlyIf(runPushSetup)
-					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[1].Digest))
+
+					manifestDigests := []string{refsIndexArtifactDigest2, manifests[0].Digest,
+						manifests[1].Digest, refsManifestConfigTypeDigest,
+						refsManifestArtifactTypeDigest}
+					for _, digest := range manifestDigests {
+						req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>",
+							reggie.WithDigest(digest))
+						resp, err := client.Do(req)
+						Expect(err).To(BeNil())
+						if resp.StatusCode() == http.StatusFound {
+							req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>",
+								reggie.WithDigest(digest))
+							resp, err := client.Do(req)
+							Expect(err).To(BeNil())
+							g.GinkgoWriter.Printf("!! Response code: %s\n", resp.StatusCode())
+							g.GinkgoWriter.Printf("!! Response:\n  %s\n", resp.RawResponse)
+							Expect(resp.StatusCode()).To(SatisfyAny(
+								SatisfyAll(
+									BeNumerically(">=", 200),
+									BeNumerically("<", 300),
+								),
+								Equal(http.StatusMethodNotAllowed),
+							), getErrorsInfo(resp))
+							req = client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>",
+								reggie.WithDigest(digest))
+							resp, err = client.Do(req)
+							Expect(err).To(BeNil())
+							Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
+						}
+					}
+
+					if emptyLayerManifestRef != "" {
+						req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>",
+							reggie.WithDigest(emptyLayerManifestDigest))
+						resp, err := client.Do(req)
+						Expect(err).To(BeNil())
+						if resp.StatusCode() == http.StatusFound {
+							req = client.NewRequest(reggie.DELETE,
+								"/v2/<name>/manifests/<reference>",
+								reggie.WithReference(emptyLayerManifestDigest))
+							resp, err = client.Do(req)
+							Expect(err).To(BeNil())
+							g.GinkgoWriter.Printf("!! Response code: %s\n", resp.StatusCode())
+							g.GinkgoWriter.Printf("!! Response:\n  %s\n", resp.RawResponse)
+							Expect(resp.StatusCode()).To(SatisfyAny(
+								SatisfyAll(
+									BeNumerically(">=", 200),
+									BeNumerically("<", 300),
+								),
+								Equal(http.StatusMethodNotAllowed),
+							), getErrorsInfo(resp))
+							req = client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>",
+								reggie.WithDigest(emptyLayerManifestDigest))
+							resp, err = client.Do(req)
+							Expect(err).To(BeNil())
+							Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
+						}
+					}
+
+					req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>",
+						reggie.WithDigest(refsManifestDLayerArtifactDigest))
 					resp, err := client.Do(req)
 					Expect(err).To(BeNil())
-					Expect(resp.StatusCode()).To(SatisfyAny(
-						SatisfyAll(
-							BeNumerically(">=", 200),
-							BeNumerically("<", 300),
-						),
-						Equal(http.StatusMethodNotAllowed),
-					))
-					if emptyLayerManifestRef != "" {
-						req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>", reggie.WithReference(emptyLayerManifestDigest))
+					if resp.StatusCode() == http.StatusFound {
+						req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
+							reggie.WithReference(refsManifestDLayerArtifactDigest))
 						resp, err = client.Do(req)
 						Expect(err).To(BeNil())
+						g.GinkgoWriter.Printf("!! Response code: %s\n", resp.StatusCode())
+						g.GinkgoWriter.Printf("!! Response:\n  %s\n", resp.RawResponse)
 						Expect(resp.StatusCode()).To(SatisfyAny(
 							SatisfyAll(
 								BeNumerically(">=", 200),
 								BeNumerically("<", 300),
 							),
 							Equal(http.StatusMethodNotAllowed),
-						))
+						), getErrorsInfo(resp))
+						req = client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>",
+							reggie.WithDigest(refsManifestDLayerArtifactDigest))
+						resp, err = client.Do(req)
+						Expect(err).To(BeNil())
+						Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
 					}
-
-					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>", reggie.WithReference(refsManifestConfigTypeDigest))
-					resp, err = client.Do(req)
-					Expect(err).To(BeNil())
-					Expect(resp.StatusCode()).To(SatisfyAny(
-						SatisfyAll(
-							BeNumerically(">=", 200),
-							BeNumerically("<", 300),
-						),
-						Equal(http.StatusMethodNotAllowed),
-					))
-
-					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>", reggie.WithReference(refsManifestArtifactTypeDigest))
-					resp, err = client.Do(req)
-					Expect(err).To(BeNil())
-					Expect(resp.StatusCode()).To(SatisfyAny(
-						SatisfyAll(
-							BeNumerically(">=", 200),
-							BeNumerically("<", 300),
-						),
-						Equal(http.StatusMethodNotAllowed),
-					))
 				})
 			}
 
 			g.Specify("Delete config blob created in tests", func() {
 				SkipIfDisabled(push)
 				RunOnlyIf(runPushSetup)
-				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[1].Digest))
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAny(
-					SatisfyAll(
-						BeNumerically(">=", 200),
-						BeNumerically("<", 300),
-					),
-					Equal(http.StatusNotFound),
-					Equal(http.StatusMethodNotAllowed),
-				))
-			})
-
-			g.Specify("Delete layer blob created in setup", func() {
-				SkipIfDisabled(push)
-				RunOnlyIf(runPushSetup)
-				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(layerBlobDigest))
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAny(
-					SatisfyAll(
-						BeNumerically(">=", 200),
-						BeNumerically("<", 300),
-					),
-					Equal(http.StatusNotFound),
-					Equal(http.StatusMethodNotAllowed),
-				))
-			})
-
-			if !deleteManifestBeforeBlobs {
-				g.Specify("Delete manifest created in tests", func() {
-					SkipIfDisabled(push)
-					RunOnlyIf(runPushSetup)
-					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[1].Digest))
+				blobDigests := []string{configs[0].Digest, configs[1].Digest}
+				for _, digest := range blobDigests {
+					req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>",
+						reggie.WithDigest(digest))
 					resp, err := client.Do(req)
 					Expect(err).To(BeNil())
-					Expect(resp.StatusCode()).To(SatisfyAny(
-						SatisfyAll(
-							BeNumerically(">=", 200),
-							BeNumerically("<", 300),
-						),
-						Equal(http.StatusMethodNotAllowed),
-					))
-					if emptyLayerManifestRef != "" {
-						req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>", reggie.WithReference(emptyLayerManifestDigest))
+					if resp.StatusCode() == http.StatusFound {
+						req = client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<reference>",
+							reggie.WithReference(digest))
 						resp, err = client.Do(req)
 						Expect(err).To(BeNil())
 						Expect(resp.StatusCode()).To(SatisfyAny(
@@ -651,31 +654,95 @@ var test02Push = func() {
 								BeNumerically(">=", 200),
 								BeNumerically("<", 300),
 							),
+							Equal(http.StatusNotFound),
 							Equal(http.StatusMethodNotAllowed),
-						))
+						), getErrorsInfo(resp))
+						req = client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>",
+							reggie.WithDigest(digest))
+						resp, err = client.Do(req)
+						Expect(err).To(BeNil())
+						Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
+					}
+				}
+			})
+
+			g.Specify("Delete layer blob created in setup", func() {
+				SkipIfDisabled(push)
+				RunOnlyIf(runPushSetup)
+				blobDigests := []string{layerBlobDigest, testBlobADigest, testBlobBDigest}
+				for _, digest := range blobDigests {
+					req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>",
+						reggie.WithDigest(digest))
+					resp, err := client.Do(req)
+					Expect(err).To(BeNil())
+					if resp.StatusCode() == http.StatusFound {
+						req = client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>",
+							reggie.WithDigest(digest))
+						resp, err = client.Do(req)
+						Expect(err).To(BeNil())
+						Expect(resp.StatusCode()).To(SatisfyAny(
+							SatisfyAll(
+								BeNumerically(">=", 200),
+								BeNumerically("<", 300),
+							),
+							Equal(http.StatusNotFound),
+							Equal(http.StatusMethodNotAllowed),
+						), getErrorsInfo(resp))
+						req = client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>",
+							reggie.WithDigest(digest))
+						resp, err = client.Do(req)
+						Expect(err).To(BeNil())
+						Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
+					}
+				}
+			})
+
+			if !deleteManifestBeforeBlobs {
+				g.Specify("Delete manifest created in tests", func() {
+					SkipIfDisabled(push)
+					RunOnlyIf(runPushSetup)
+
+					manifestDigests := []string{refsIndexArtifactDigest2, manifests[0].Digest,
+						manifests[1].Digest, refsManifestConfigTypeDigest,
+						refsManifestArtifactTypeDigest}
+					for _, digest := range manifestDigests {
+						req := client.NewRequest(reggie.DELETE,
+							"/v2/<name>/manifests/<reference>",
+							reggie.WithReference(digest))
+						resp, err := client.Do(req)
+						Expect(err).To(BeNil())
+						Expect(resp.StatusCode()).To(SatisfyAny(
+							SatisfyAll(
+								BeNumerically(">=", 200),
+								BeNumerically("<", 300),
+							),
+							Equal(http.StatusMethodNotAllowed),
+						), getErrorsInfo(resp))
+						req = client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>",
+							reggie.WithDigest(digest))
+						resp, err = client.Do(req)
+						Expect(err).To(BeNil())
+						Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
 					}
 
-					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>", reggie.WithReference(refsManifestConfigTypeDigest))
-					resp, err = client.Do(req)
-					Expect(err).To(BeNil())
-					Expect(resp.StatusCode()).To(SatisfyAny(
-						SatisfyAll(
-							BeNumerically(">=", 200),
-							BeNumerically("<", 300),
-						),
-						Equal(http.StatusMethodNotAllowed),
-					))
-
-					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>", reggie.WithReference(refsManifestArtifactTypeDigest))
-					resp, err = client.Do(req)
-					Expect(err).To(BeNil())
-					Expect(resp.StatusCode()).To(SatisfyAny(
-						SatisfyAll(
-							BeNumerically(">=", 200),
-							BeNumerically("<", 300),
-						),
-						Equal(http.StatusMethodNotAllowed),
-					))
+					if emptyLayerManifestRef != "" {
+						req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
+							reggie.WithReference(emptyLayerManifestDigest))
+						resp, err := client.Do(req)
+						Expect(err).To(BeNil())
+						Expect(resp.StatusCode()).To(SatisfyAny(
+							SatisfyAll(
+								BeNumerically(">=", 200),
+								BeNumerically("<", 300),
+							),
+							Equal(http.StatusMethodNotAllowed),
+						), getErrorsInfo(resp))
+						req = client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>",
+							reggie.WithDigest(emptyLayerManifestDigest))
+						resp, err = client.Do(req)
+						Expect(err).To(BeNil())
+						Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
+					}
 				})
 			}
 		})
