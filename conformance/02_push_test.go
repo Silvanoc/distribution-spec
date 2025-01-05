@@ -497,6 +497,53 @@ var test02Push = func() {
 			})
 		})
 
+		g.Context("Index Upload", func() {
+			g.Specify("Registry should accept a manifest upload with image index", func() {
+				SkipIfDisabled(push)
+
+				// Populate registry with test blob
+				SkipIfDisabled(push)
+				RunOnlyIf(runPushSetup)
+				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
+					SetQueryParam("digest", configs[0].Digest).
+					SetHeader("Content-Type", "application/octet-stream").
+					SetHeader("Content-Length", configs[0].ContentLength).
+					SetBody(configs[0].Content)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), getErrorsInfo(resp))
+
+				// Populate registry with test manifest
+				SkipIfDisabled(push)
+				RunOnlyIf(runPushSetup)
+				tag := testTagName
+				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(tag)).
+					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+					SetBody(manifests[0].Content)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), getErrorsInfo(resp))
+
+				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(refsIndexArtifactDigest2)).
+					SetHeader("Content-Type", "application/vnd.oci.image.index.v1+json").
+					SetBody(refsIndexArtifactContent2)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), getErrorsInfo(resp))
+			})
+		})
+
 		g.Context("Teardown", func() {
 			if deleteManifestBeforeBlobs {
 				g.Specify("Delete manifest created in tests", func() {
