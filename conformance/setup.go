@@ -151,6 +151,8 @@ var (
 	refsManifestBLayerArtifactDigest   string
 	refsManifestCLayerArtifactContent  []byte
 	refsManifestCLayerArtifactDigest   string
+	refsManifestDLayerArtifactContent  []byte
+	refsManifestDLayerArtifactDigest   string
 	refsManifestConfigTypeContent      []byte
 	refsManifestConfigTypeDigest       string
 	refsManifestArtifactTypeContent    []byte
@@ -495,6 +497,31 @@ func init() {
 	}
 
 	refsManifestCLayerArtifactDigest = godigest.FromBytes(refsManifestCLayerArtifactContent).String()
+
+	// ManifestDLayerArtifact is the same as B but based on a subject that has not been pushed
+	refsManifestDLayerArtifact := manifest{
+		SchemaVersion: 2,
+		MediaType:     "application/vnd.oci.image.manifest.v1+json",
+		Config: descriptor{
+			MediaType: "application/vnd.oci.image.config.v1+json",
+			Digest:    godigest.FromBytes(configs[0].Content),
+			Size:      int64(len(configs[0].Content)),
+			Data:      configs[0].Content, // must be the config content.
+		},
+		Subject: &descriptor{
+			MediaType: "application/vnd.oci.image.manifest.v1+json",
+			Size:      int64(len(manifests[0].Content)),
+			Digest:    godigest.FromBytes(manifests[0].Content),
+		},
+		Layers: []descriptor{},
+	}
+
+	refsManifestDLayerArtifactContent, err = json.MarshalIndent(&refsManifestDLayerArtifact, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	refsManifestDLayerArtifactDigest = godigest.FromBytes(refsManifestDLayerArtifactContent).String()
 
 	// artifact using config.MediaType = artifactType
 	refsManifestConfigType := manifest{
