@@ -1,15 +1,54 @@
 package conformance
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
+	"bytes"
 	"strconv"
+	"strings"
 
 	"github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
+
+func getErrorsInfo(resp *reggie.Response) string {
+	if len(resp.String()) == 0 {
+		return ""
+	}
+
+	// Create a decoder from the JSON string
+	decoder := json.NewDecoder(bytes.NewReader(resp.Body()))
+
+	// Decode the JSON into a map[string]interface{}
+	var result map[string]any
+	err := decoder.Decode(&result)
+	if err != nil {
+		// if response body up to 199 characters, show it complete
+		if len(resp.Body()) < 200 {
+			return fmt.Sprintf("Response body is not JSON (possibly not expected to be): %s\n", resp.Body())
+		// response body from 200 characters upwards are too long to be completely shown
+		} else {
+			return fmt.Sprintf("Response body is not JSON (possibly not expected to be): %s [...]\n", resp.Body()[:199])
+		}
+	}
+
+	errorsInfo, err := resp.Errors()
+	if err != nil {
+		return fmt.Sprintf("Response body is not an Errors JSON (possibly not expected to be): %s\n", resp.Body())
+	}
+	errorsMsg := []string{}
+	for _, err := range errorsInfo {
+		errMsg := err.Message
+		if err.Detail != nil {
+			errMsg = fmt.Sprintf("%s: %s", errMsg, err.Detail)
+		}
+		errorsMsg = append(errorsMsg, errMsg)
+	}
+	return strings.Join(errorsMsg, "; ")
+}
 
 var test02Push = func() {
 	g.Context(titlePush, func() {
@@ -35,7 +74,7 @@ var test02Push = func() {
 					SetBody(testBlobA)
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
+				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted), getErrorsInfo(resp))
 				lastResponse = resp
 			})
 
@@ -48,7 +87,7 @@ var test02Push = func() {
 					SetHeader("Content-Length", testBlobALength)
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+				Expect(resp.StatusCode()).To(Equal(http.StatusCreated), getErrorsInfo(resp))
 				location := resp.Header().Get("Location")
 				Expect(location).ToNot(BeEmpty())
 			})
@@ -78,7 +117,7 @@ var test02Push = func() {
 				Expect(resp.StatusCode()).To(SatisfyAny(
 					Equal(http.StatusCreated),
 					Equal(http.StatusAccepted),
-				))
+				), getErrorsInfo(resp))
 				lastResponse = resp
 			})
 
@@ -91,7 +130,7 @@ var test02Push = func() {
 				if lastResponse.StatusCode() == http.StatusAccepted {
 					Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
 				} else {
-					Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+					Expect(resp.StatusCode()).To(Equal(http.StatusOK), getErrorsInfo(resp))
 				}
 			})
 
@@ -100,7 +139,7 @@ var test02Push = func() {
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
+				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted), getErrorsInfo(resp))
 				lastResponse = resp
 			})
 
@@ -115,7 +154,7 @@ var test02Push = func() {
 				Expect(err).To(BeNil())
 				location := resp.Header().Get("Location")
 				Expect(location).ToNot(BeEmpty())
-				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+				Expect(resp.StatusCode()).To(Equal(http.StatusCreated), getErrorsInfo(resp))
 			})
 
 			g.Specify("GET request to existing blob should yield 200 response", func() {
@@ -123,7 +162,7 @@ var test02Push = func() {
 				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[1].Digest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK), getErrorsInfo(resp))
 			})
 
 			g.Specify("PUT upload of a layer blob should yield a 201 Response", func() {
@@ -140,7 +179,7 @@ var test02Push = func() {
 				Expect(err).To(BeNil())
 				location := resp.Header().Get("Location")
 				Expect(location).ToNot(BeEmpty())
-				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+				Expect(resp.StatusCode()).To(Equal(http.StatusCreated), getErrorsInfo(resp))
 			})
 
 			g.Specify("GET request to existing layer should yield 200 response", func() {
@@ -148,7 +187,7 @@ var test02Push = func() {
 				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(layerBlobDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK), getErrorsInfo(resp))
 			})
 		})
 
@@ -179,7 +218,7 @@ var test02Push = func() {
 					SetBody(testBlobBChunk2)
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusRequestedRangeNotSatisfiable))
+				Expect(resp.StatusCode()).To(Equal(http.StatusRequestedRangeNotSatisfiable), getErrorsInfo(resp))
 			})
 
 			g.Specify("PATCH request with first chunk should return 202", func() {
@@ -198,7 +237,7 @@ var test02Push = func() {
 					SetBody(testBlobBChunk1)
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
+				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted), getErrorsInfo(resp))
 				Expect(resp.Header().Get("Range")).To(Equal(testBlobBChunk1Range))
 				lastResponse = resp
 			})
@@ -212,7 +251,7 @@ var test02Push = func() {
 					SetBody(testBlobBChunk1)
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusRequestedRangeNotSatisfiable))
+				Expect(resp.StatusCode()).To(Equal(http.StatusRequestedRangeNotSatisfiable), getErrorsInfo(resp))
 			})
 
 			g.Specify("Get on stale blob upload should return 204 with a range and location", func() {
@@ -220,7 +259,7 @@ var test02Push = func() {
 				req := client.NewRequest(reggie.GET, prevResponse.GetRelativeLocation())
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusNoContent))
+				Expect(resp.StatusCode()).To(Equal(http.StatusNoContent), getErrorsInfo(resp))
 				Expect(resp.Header().Get("Location")).ToNot(BeEmpty())
 				Expect(resp.Header().Get("Range")).To(Equal(testBlobBChunk1Range))
 				lastResponse = resp
@@ -236,7 +275,7 @@ var test02Push = func() {
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				location := resp.Header().Get("Location")
-				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
+				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted), getErrorsInfo(resp))
 				Expect(resp.Header().Get("Range")).To(Equal(fmt.Sprintf("0-%d", len(testBlobB)-1)))
 				Expect(location).ToNot(BeEmpty())
 				lastResponse = resp
@@ -250,7 +289,7 @@ var test02Push = func() {
 					SetQueryParam("digest", testBlobBDigest)
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+				Expect(resp.StatusCode()).To(Equal(http.StatusCreated), getErrorsInfo(resp))
 				location := resp.Header().Get("Location")
 				Expect(location).ToNot(BeEmpty())
 			})
@@ -264,7 +303,7 @@ var test02Push = func() {
 					SetQueryParam("mount", dummyDigest)
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
+				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted), getErrorsInfo(resp))
 				Expect(resp.GetAbsoluteLocation()).To(Not(BeEmpty()))
 			})
 
@@ -279,24 +318,24 @@ var test02Push = func() {
 				Expect(resp.StatusCode()).To(SatisfyAny(
 					Equal(http.StatusCreated),
 					Equal(http.StatusAccepted),
-				))
+				), getErrorsInfo(resp))
 				lastResponse = resp
 			})
 
 			g.Specify("GET request to test digest within cross-mount namespace should return 200", func() {
 				SkipIfDisabled(push)
 				RunOnlyIf(lastResponse.StatusCode() == http.StatusCreated)
-				Expect(lastResponse.GetRelativeLocation()).To(Equal(fmt.Sprintf("/v2/%s/blobs/%s", crossmountNamespace, testBlobADigest)))
+				Expect(lastResponse.GetRelativeLocation()).To(Equal(fmt.Sprintf("/v2/%s/blobs/%s", crossmountNamespace, testBlobADigest)), getErrorsInfo(lastResponse))
 				req := client.NewRequest(reggie.GET, lastResponse.GetRelativeLocation())
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK), getErrorsInfo(resp))
 			})
 
 			g.Specify("Cross-mounting of nonexistent blob should yield session id", func() {
 				SkipIfDisabled(push)
 				RunOnlyIf(lastResponse.StatusCode() == http.StatusAccepted)
-				Expect(lastResponse.GetRelativeLocation()).To(HavePrefix(fmt.Sprintf("/v2/%s/blobs/uploads/", crossmountNamespace)))
+				Expect(lastResponse.GetRelativeLocation()).To(HavePrefix(fmt.Sprintf("/v2/%s/blobs/uploads/", crossmountNamespace)), getErrorsInfo(lastResponse))
 			})
 
 			g.Specify("Cross-mounting without from, and automatic content discovery enabled should return a 201", func() {
@@ -309,7 +348,7 @@ var test02Push = func() {
 					SetQueryParam("mount", testBlobADigest)
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+				Expect(resp.StatusCode()).To(Equal(http.StatusCreated), getErrorsInfo(resp))
 			})
 
 			g.Specify("Cross-mounting without from, and automatic content discovery disabled should return a 202", func() {
@@ -322,7 +361,7 @@ var test02Push = func() {
 					SetQueryParam("mount", testBlobADigest)
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
+				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted), getErrorsInfo(resp))
 			})
 		})
 
@@ -348,7 +387,7 @@ var test02Push = func() {
 					Expect(err).To(BeNil())
 					location := resp.Header().Get("Location")
 					Expect(location).ToNot(BeEmpty())
-					Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+					Expect(resp.StatusCode()).To(Equal(http.StatusCreated), getErrorsInfo(resp))
 				}
 			})
 
@@ -364,7 +403,7 @@ var test02Push = func() {
 					location := resp.Header().Get("Location")
 					emptyLayerManifestRef = location
 					Expect(location).ToNot(BeEmpty())
-					Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+					Expect(resp.StatusCode()).To(Equal(http.StatusCreated), getErrorsInfo(resp))
 				} else {
 					Warn("image manifest with no layers is not supported")
 				}
@@ -376,7 +415,7 @@ var test02Push = func() {
 					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK), getErrorsInfo(resp))
 			})
 		})
 
