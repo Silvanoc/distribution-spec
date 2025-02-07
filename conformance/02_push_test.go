@@ -419,6 +419,54 @@ var test02Push = func() {
 			})
 		})
 
+		g.Context("Manifest Upload with custom config/mediaType", func() {
+			g.Specify("POST request with digest and blob should yield a 201 or 202", func() {
+				SkipIfDisabled(push)
+
+				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
+					SetQueryParam("digest", godigest.FromBytes(testRefBlobA).String()).
+					SetHeader("Content-Type", "application/octet-stream").
+					SetHeader("Content-Length", strconv.Itoa(len(testRefBlobA))).
+					SetBody(testRefBlobA)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), getErrorsInfo(resp))
+
+				lastResponse = resp
+			})
+
+			g.Specify("GET request to existing layer should yield 200 response", func() {
+				SkipIfDisabled(push)
+				Expect(lastResponse).ToNot(BeNil())
+
+				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(godigest.FromBytes(testRefBlobA).String()))
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK), getErrorsInfo(resp))
+			})
+
+			g.Specify("Registry should accept a manifest upload with custom config/mediaType (as artifact type) [OCI-Image v1.1]", func() {
+				SkipIfDisabled(push)
+				Expect(lastResponse).ToNot(BeNil())
+
+				// Populate registry with test references manifest (config.MediaType = artifactType)
+				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(refsManifestConfigTypeDigest)).
+					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+					SetBody(refsManifestConfigTypeContent)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), getErrorsInfo(resp))
+			})
+		})
+
 		g.Context("Teardown", func() {
 			if deleteManifestBeforeBlobs {
 				g.Specify("Delete manifest created in tests", func() {
@@ -446,6 +494,17 @@ var test02Push = func() {
 							Equal(http.StatusMethodNotAllowed),
 						))
 					}
+
+					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>", reggie.WithReference(refsManifestConfigTypeDigest))
+					resp, err = client.Do(req)
+					Expect(err).To(BeNil())
+					Expect(resp.StatusCode()).To(SatisfyAny(
+						SatisfyAll(
+							BeNumerically(">=", 200),
+							BeNumerically("<", 300),
+						),
+						Equal(http.StatusMethodNotAllowed),
+					))
 				})
 			}
 
@@ -507,6 +566,17 @@ var test02Push = func() {
 							Equal(http.StatusMethodNotAllowed),
 						))
 					}
+
+					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>", reggie.WithReference(refsManifestConfigTypeDigest))
+					resp, err = client.Do(req)
+					Expect(err).To(BeNil())
+					Expect(resp.StatusCode()).To(SatisfyAny(
+						SatisfyAll(
+							BeNumerically(">=", 200),
+							BeNumerically("<", 300),
+						),
+						Equal(http.StatusMethodNotAllowed),
+					))
 				})
 			}
 		})
