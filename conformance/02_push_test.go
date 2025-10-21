@@ -562,9 +562,9 @@ var test02Push = func() {
 				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
 
 				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
-					reggie.WithReference(refsManifestDLayerArtifactDigest)).
+					reggie.WithReference(refsManifestSubjectDigest)).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
-					SetBody(refsManifestDLayerArtifactContent)
+					SetBody(refsManifestSubjectContent)
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
@@ -647,7 +647,8 @@ var test02Push = func() {
 					manifestDigests := []string{refsNestedIndexArtifactDigest,
 						refsIndexArtifactDigest, manifests[0].Digest,
 						manifests[1].Digest, refsManifestConfigTypeDigest,
-						refsManifestArtifactTypeDigest, emptyConfigManifestDigest}
+						refsManifestArtifactTypeDigest, emptyConfigManifestDigest,
+						refsManifestSubjectDigest}
 					for _, digest := range manifestDigests {
 						req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>",
 							reggie.WithDigest(digest))
@@ -701,31 +702,6 @@ var test02Push = func() {
 							Expect(err).To(BeNil())
 							Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
 						}
-					}
-
-					req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>",
-						reggie.WithDigest(refsManifestDLayerArtifactDigest))
-					resp, err := client.Do(req)
-					Expect(err).To(BeNil())
-					if resp.StatusCode() == http.StatusFound {
-						req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
-							reggie.WithReference(refsManifestDLayerArtifactDigest))
-						resp, err = client.Do(req)
-						Expect(err).To(BeNil())
-						g.GinkgoWriter.Printf("!! Response code: %s\n", resp.StatusCode())
-						g.GinkgoWriter.Printf("!! Response:\n  %s\n", resp.RawResponse)
-						Expect(resp.StatusCode()).To(SatisfyAny(
-							SatisfyAll(
-								BeNumerically(">=", 200),
-								BeNumerically("<", 300),
-							),
-							Equal(http.StatusMethodNotAllowed),
-						), getErrorsInfo(resp))
-						req = client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>",
-							reggie.WithDigest(refsManifestDLayerArtifactDigest))
-						resp, err = client.Do(req)
-						Expect(err).To(BeNil())
-						Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
 					}
 				})
 			}

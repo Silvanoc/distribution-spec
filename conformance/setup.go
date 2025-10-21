@@ -153,32 +153,34 @@ var (
 	refsManifestBLayerArtifactDigest   string
 	refsManifestCLayerArtifactContent  []byte
 	refsManifestCLayerArtifactDigest   string
-	refsManifestDLayerArtifactContent  []byte
-	refsManifestDLayerArtifactDigest   string
-	refsManifestConfigTypeContent      []byte
-	refsManifestConfigTypeDigest       string
-	refsManifestArtifactTypeContent    []byte
-	refsManifestArtifactTypeDigest     string
-	refsIndexArtifactContent           []byte
-	refsIndexArtifactDigest            string
-	refsNestedIndexArtifactContent     []byte
-	refsNestedIndexArtifactDigest      string
-	reportJUnitFilename                string
-	reportHTMLFilename                 string
-	httpWriter                         *httpDebugWriter
-	testsToRun                         int
-	suiteDescription                   string
-	runPullSetup                       bool
-	runPushSetup                       bool
-	runContentDiscoverySetup           bool
-	runContentManagementSetup          bool
-	deleteManifestBeforeBlobs          bool
-	runAutomaticCrossmountTest         bool
-	automaticCrossmountEnabled         bool
-	configs                            []TestBlob
-	manifests                          []TestBlob
-	seed                               int64
-	Version                            = "unknown"
+	// refsManifestDLayerArtifactContent  []byte
+	refsManifestDLayerArtifactDigest string
+	refsManifestConfigTypeContent    []byte
+	refsManifestConfigTypeDigest     string
+	refsManifestSubjectContent       []byte
+	refsManifestSubjectDigest        string
+	refsManifestArtifactTypeContent  []byte
+	refsManifestArtifactTypeDigest   string
+	refsIndexArtifactContent         []byte
+	refsIndexArtifactDigest          string
+	refsNestedIndexArtifactContent   []byte
+	refsNestedIndexArtifactDigest    string
+	reportJUnitFilename              string
+	reportHTMLFilename               string
+	httpWriter                       *httpDebugWriter
+	testsToRun                       int
+	suiteDescription                 string
+	runPullSetup                     bool
+	runPushSetup                     bool
+	runContentDiscoverySetup         bool
+	runContentManagementSetup        bool
+	deleteManifestBeforeBlobs        bool
+	runAutomaticCrossmountTest       bool
+	automaticCrossmountEnabled       bool
+	configs                          []TestBlob
+	manifests                        []TestBlob
+	seed                             int64
+	Version                          = "unknown"
 )
 
 func init() {
@@ -543,7 +545,7 @@ func init() {
 
 		refsManifestDLayerArtifactDigest = godigest.FromBytes(refsManifestDLayerArtifactContent).String()
 	*/
-	// artifact using config.MediaType = artifactType
+	// Manifest with artifact using config.MediaType = artifactType
 	refsManifestConfigType := manifest{
 		SchemaVersion: 2,
 		MediaType:     "application/vnd.oci.image.manifest.v1+json",
@@ -624,6 +626,31 @@ func init() {
 		refsIndexArtifactDigest = godigest.FromBytes(refsIndexArtifactContent).String()
 		testAnnotationValues[refsIndexArtifactDigest] = refsIndexArtifact.Annotations[testAnnotationKey]
 	*/
+
+	//ManifestDLayerArtifact is the same as B but based on a subject that has not been pushed
+	refsManifestSubject := manifest{
+		SchemaVersion: 2,
+		MediaType:     "application/vnd.oci.image.manifest.v1+json",
+		Config: descriptor{
+			MediaType: "application/vnd.oci.image.config.v1+json",
+			Digest:    godigest.FromBytes(configs[0].Content),
+			Size:      int64(len(configs[0].Content)),
+			Data:      configs[0].Content, // must be the config content.
+		},
+		Subject: &descriptor{
+			MediaType: "application/vnd.oci.image.manifest.v1+json",
+			Size:      int64(len(manifests[0].Content)),
+			Digest:    godigest.FromBytes(manifests[0].Content),
+		},
+		Layers: layers,
+	}
+
+	refsManifestSubjectContent, err = json.MarshalIndent(&refsManifestSubject, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	refsManifestSubjectDigest = godigest.FromBytes(refsManifestSubjectContent).String()
 
 	// Populate registry with test index manifest
 	manifestContentLength, err := strconv.Atoi(manifests[0].ContentLength)
