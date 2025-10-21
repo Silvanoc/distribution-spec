@@ -748,7 +748,7 @@ var test02Push = func() {
 			g.Specify("Delete config blob created in tests", func() {
 				SkipIfDisabled(push)
 				RunOnlyIf(runPushSetup)
-				blobDigests := []string{configs[0].Digest, configs[1].Digest, testBlob4MBDigest}
+				blobDigests := []string{configs[0].Digest, configs[1].Digest}
 				for _, digest := range blobDigests {
 					req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>",
 						reggie.WithDigest(digest))
@@ -779,7 +779,7 @@ var test02Push = func() {
 			g.Specify("Delete layer blob created in setup", func() {
 				SkipIfDisabled(push)
 				RunOnlyIf(runPushSetup)
-				blobDigests := []string{layerBlobDigest, testBlobADigest, testBlobBDigest}
+				blobDigests := []string{layerBlobDigest, testBlobADigest, testBlobBDigest, testBlob4MBDigest}
 				for _, digest := range blobDigests {
 					req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>",
 						reggie.WithDigest(digest))

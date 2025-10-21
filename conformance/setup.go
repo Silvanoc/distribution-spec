@@ -315,6 +315,32 @@ func init() {
 		Size:      int64(len(emptyJSONBlob)),
 		Digest:    godigest.FromBytes(emptyJSONBlob),
 	}
+	emptyJSONBlob = []byte("{}")
+
+	nonexistentManifest = ".INVALID_MANIFEST_NAME"
+	invalidManifestContent = []byte("blablabla")
+
+	dig, blob := randomBlob(42, seed+1)
+	testBlobA = blob
+	testBlobALength = strconv.Itoa(len(testBlobA))
+	testBlobADigest = dig.String()
+
+	setupChunkedBlob(42)
+
+	testRefBlobA = []byte("NHL Peanut Butter on my NHL bagel")
+	testRefBlobALength = strconv.Itoa(len(testRefBlobA))
+	testRefBlobADigest = godigest.FromBytes(testRefBlobA).String()
+
+	testRefArtifactTypeA = "application/vnd.nhl.peanut.butter.bagel"
+
+	testRefBlobB = []byte("NBA Strawberry Jam on my NBA croissant")
+	testRefBlobBLength = strconv.Itoa(len(testRefBlobB))
+	testRefBlobBDigest = godigest.FromBytes(testRefBlobB).String()
+
+	testRefArtifactTypeB = "application/vnd.nba.strawberry.jam.croissant"
+
+	testAnnotationKey = "org.opencontainers.conformance.test"
+	testAnnotationValues = map[string]string{}
 	// manifest with empty layer
 	emptyLayerManifest := manifest{
 		SchemaVersion: 2,
@@ -350,16 +376,6 @@ func init() {
 		log.Fatal(err)
 	}
 	emptyConfigManifestDigest = string(godigest.FromBytes(emptyConfigManifestContent))
-
-	nonexistentManifest = ".INVALID_MANIFEST_NAME"
-	invalidManifestContent = []byte("blablabla")
-
-	dig, blob := randomBlob(42, seed+1)
-	testBlobA = blob
-	testBlobALength = strconv.Itoa(len(testBlobA))
-	testBlobADigest = dig.String()
-
-	setupChunkedBlob(42)
 
 	// Manifest with artifact using config.MediaType = artifactType
 	testManifestConfigType := manifest{
@@ -508,23 +524,6 @@ func init() {
 
 	// CONTENT DISCOVERY Test
 	// create manifests for referrers test (artifacts with Subject field set)
-	emptyJSONBlob = []byte("{}")
-
-	testRefBlobA = []byte("NHL Peanut Butter on my NHL bagel")
-	testRefBlobALength = strconv.Itoa(len(testRefBlobA))
-	testRefBlobADigest = godigest.FromBytes(testRefBlobA).String()
-
-	testRefArtifactTypeA = "application/vnd.nhl.peanut.butter.bagel"
-
-	testRefBlobB = []byte("NBA Strawberry Jam on my NBA croissant")
-	testRefBlobBLength = strconv.Itoa(len(testRefBlobB))
-	testRefBlobBDigest = godigest.FromBytes(testRefBlobB).String()
-
-	testRefArtifactTypeB = "application/vnd.nba.strawberry.jam.croissant"
-
-	testAnnotationKey = "org.opencontainers.conformance.test"
-	testAnnotationValues = map[string]string{}
-
 	// artifact with Subject ref using config.MediaType = artifactType
 	refsManifestAConfigArtifact := manifest{
 		SchemaVersion: 2,
