@@ -353,7 +353,7 @@ func init() {
 	testAnnotationKey = "org.opencontainers.conformance.test"
 	testAnnotationValues = map[string]string{}
 
-	// artifact with Subject ref using config.MediaType = artifactType
+/*	// artifact with Subject ref using config.MediaType = artifactType
 	refsManifestAConfigArtifact := manifest{
 		SchemaVersion: 2,
 		MediaType:     "application/vnd.oci.image.manifest.v1+json",
@@ -524,7 +524,7 @@ func init() {
 	}
 
 	refsManifestDLayerArtifactDigest = godigest.FromBytes(refsManifestDLayerArtifactContent).String()
-
+*/
 	// artifact using config.MediaType = artifactType
 	refsManifestConfigType := manifest{
 		SchemaVersion: 2,
@@ -572,6 +572,7 @@ func init() {
 	refsManifestArtifactTypeDigest = godigest.FromBytes(refsManifestArtifactTypeContent).String()
 	testAnnotationValues[refsManifestArtifactTypeDigest] = refsManifestArtifactType.Annotations[testAnnotationKey]
 
+/*
 	testRefArtifactTypeIndex = "application/vnd.food.stand"
 	refsIndexArtifact := index{
 		SchemaVersion: 2,
@@ -604,10 +605,11 @@ func init() {
 	}
 	refsIndexArtifactDigest = godigest.FromBytes(refsIndexArtifactContent).String()
 	testAnnotationValues[refsIndexArtifactDigest] = refsIndexArtifact.Annotations[testAnnotationKey]
+*/
 
-	manifestContentLength, err := strconv.Atoi(manifests[0].ContentLength)
 	// Populate registry with test index manifest
-	refsIndexArtifact2 := index{
+	manifestContentLength, err := strconv.Atoi(manifests[0].ContentLength)
+	refsIndexArtifact := index{
 		SchemaVersion: 2,
 		MediaType:     "application/vnd.oci.image.index.v1+json",
 		ArtifactType:  testRefArtifactTypeIndex,
@@ -622,28 +624,29 @@ func init() {
 			testAnnotationKey: "test index",
 		},
 	}
-	refsIndexArtifactContent2, err = json.MarshalIndent(&refsIndexArtifact2, "", "\t")
-	refsIndexArtifactDigest2 = godigest.FromBytes(refsIndexArtifactContent2).String()
+	refsIndexArtifactContent, err = json.MarshalIndent(&refsIndexArtifact, "", "\t")
+	refsIndexArtifactDigest = godigest.FromBytes(refsIndexArtifactContent).String()
 
-	// refsIndexArtifactContentLength2 := strconv.Itoa(len(refsIndexArtifactContent2))
-	refsIndexArtifactContentLength2 := len(refsIndexArtifactContent2)
-	// Populate registry with test index manifest
-	refsIndexArtifact3 := index{
+	// refsIndexArtifactContentLength := strconv.Itoa(len(refsIndexArtifactContent))
+	refsIndexArtifactContentLength := len(refsIndexArtifactContent)
+	
+	// Populate registry with nested test index manifest
+	refsNestedIndexArtifact := index{
 		SchemaVersion: 2,
 		MediaType:     "application/vnd.oci.image.index.v1+json",
 		Manifests: []descriptor{
 			{
 				MediaType: "application/vnd.oci.image.index.v1+json",
-				Size:      int64(refsIndexArtifactContentLength2),
-				Digest:    godigest.Digest(refsIndexArtifactDigest2),
+				Size:      int64(refsIndexArtifactContentLength),
+				Digest:    godigest.Digest(refsIndexArtifactDigest),
 			},
 		},
 		Annotations: map[string]string{
 			testAnnotationKey: "test index",
 		},
 	}
-	refsIndexArtifactContent3, err = json.MarshalIndent(&refsIndexArtifact3, "", "\t")
-	refsIndexArtifactDigest3 = godigest.FromBytes(refsIndexArtifactContent3).String()
+	refsNestedIndexArtifactContent, err = json.MarshalIndent(&refsNestedIndexArtifact, "", "\t")
+	refsNestedIndexArtifactDigest = godigest.FromBytes(refsNestedIndexArtifactContent).String()
 
 	dummyDigest = godigest.FromString("hello world").String()
 
