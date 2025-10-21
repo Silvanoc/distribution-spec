@@ -138,6 +138,8 @@ var (
 	layerBlobContentLength             string
 	emptyLayerManifestContent          []byte
 	emptyLayerManifestDigest           string
+	emptyConfigManifestContent         []byte
+	emptyConfigManifestDigest          string
 	nonexistentManifest                string
 	emptyJSONBlob                      []byte
 	emptyJSONDescriptor                descriptor
@@ -300,8 +302,15 @@ func init() {
 	}
 
 	// used in push test
+	emptyJSONDescriptor = descriptor{
+		MediaType: "application/vnd.oci.empty.v1+json",
+		Size:      int64(len(emptyJSONBlob)),
+		Digest:    godigest.FromBytes(emptyJSONBlob),
+	}
+	// manifest with empty layer
 	emptyLayerManifest := manifest{
 		SchemaVersion: 2,
+		MediaType:     "application/vnd.oci.image.manifest.v1+json",
 		Config: descriptor{
 			MediaType:           "application/vnd.oci.image.config.v1+json",
 			Digest:              godigest.Digest(configs[1].Digest),
@@ -309,7 +318,9 @@ func init() {
 			Data:                configs[1].Content,    // must be the config content.
 			NewUnspecifiedField: []byte("hello world"), // content doesn't matter.
 		},
-		Layers: []descriptor{},
+		Layers: []descriptor{
+			emptyJSONDescriptor,
+		},
 	}
 
 	emptyLayerManifestContent, err = json.MarshalIndent(&emptyLayerManifest, "", "\t")
@@ -317,6 +328,20 @@ func init() {
 		log.Fatal(err)
 	}
 	emptyLayerManifestDigest = string(godigest.FromBytes(emptyLayerManifestContent))
+
+	// manifest with empty config
+	emptyConfigManifest := manifest{
+		SchemaVersion: 2,
+		MediaType:     "application/vnd.oci.image.manifest.v1+json",
+		Config:        emptyJSONDescriptor,
+		Layers:        layers,
+	}
+
+	emptyConfigManifestContent, err = json.MarshalIndent(&emptyConfigManifest, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+	emptyConfigManifestDigest = string(godigest.FromBytes(emptyConfigManifestContent))
 
 	nonexistentManifest = ".INVALID_MANIFEST_NAME"
 	invalidManifestContent = []byte("blablabla")
@@ -330,11 +355,6 @@ func init() {
 
 	// used in referrers test (artifacts with Subject field set)
 	emptyJSONBlob = []byte("{}")
-	emptyJSONDescriptor = descriptor{
-		MediaType: "application/vnd.oci.empty.v1+json",
-		Size:      int64(len(emptyJSONBlob)),
-		Digest:    godigest.FromBytes(emptyJSONBlob),
-	}
 
 	testRefBlobA = []byte("NHL Peanut Butter on my NHL bagel")
 	testRefBlobALength = strconv.Itoa(len(testRefBlobA))

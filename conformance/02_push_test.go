@@ -413,6 +413,21 @@ var test02Push = func() {
 				}
 			})
 
+			g.Specify("Registry should accept a manifest upload with empty config", func() {
+				SkipIfDisabled(push)
+				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(emptyConfigManifestDigest)).
+					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+					SetBody(emptyConfigManifestContent)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				if resp.StatusCode() == http.StatusCreated {
+					Expect(resp.StatusCode()).To(Equal(http.StatusCreated), getErrorsInfo(resp))
+				} else {
+					Warn("image manifest with empty config is not supported")
+				}
+			})
+
 			g.Specify("GET request to manifest URL (digest) should yield 200 response", func() {
 				SkipIfDisabled(push)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[1].Digest)).
@@ -632,7 +647,7 @@ var test02Push = func() {
 					manifestDigests := []string{refsNestedIndexArtifactDigest,
 						refsIndexArtifactDigest, manifests[0].Digest,
 						manifests[1].Digest, refsManifestConfigTypeDigest,
-						refsManifestArtifactTypeDigest}
+						refsManifestArtifactTypeDigest, emptyConfigManifestDigest}
 					for _, digest := range manifestDigests {
 						req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>",
 							reggie.WithDigest(digest))
