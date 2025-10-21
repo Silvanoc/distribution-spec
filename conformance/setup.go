@@ -552,9 +552,7 @@ func init() {
 			Size:      int64(len(testRefBlobA)),
 			Digest:    godigest.FromBytes(testRefBlobA),
 		},
-		Layers: []descriptor{
-			emptyJSONDescriptor,
-		},
+		Layers: layers,
 		Annotations: map[string]string{
 			testAnnotationKey: "test config a",
 		},
@@ -573,10 +571,12 @@ func init() {
 		SchemaVersion: 2,
 		MediaType:     "application/vnd.oci.image.manifest.v1+json",
 		ArtifactType:  testRefArtifactTypeA,
-		Config:        emptyJSONDescriptor,
-		Layers: []descriptor{
-			emptyJSONDescriptor,
+		Config: descriptor{
+			MediaType: "application/vnd.oci.image.manifest.v1+json",
+			Size:      int64(len(testRefBlobA)),
+			Digest:    godigest.FromBytes(testRefBlobA),
 		},
+		Layers: layers,
 		Annotations: map[string]string{
 			testAnnotationKey: "test layer a",
 		},
