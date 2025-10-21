@@ -126,6 +126,9 @@ var (
 	testBlobBChunk2Length              string
 	testBlobBChunk1Range               string
 	testBlobBChunk2Range               string
+	testBlob4MBDigest                  string
+	testBlob4MBLength                  string
+	testBlob4MB                        []byte
 	testAnnotationKey                  string
 	testAnnotationValues               map[string]string
 	client                             *reggie.Client
@@ -168,6 +171,8 @@ var (
 	testManifestConfigTypeDigest       string
 	testManifestSubjectContent         []byte
 	testManifestSubjectDigest          string
+	testManifest4MBContent             []byte
+	testManifest4MBDigest              string
 	suiteDescription                   string
 	runPullSetup                       bool
 	runPushSetup                       bool
@@ -254,6 +259,7 @@ func init() {
 		})
 	}
 
+	// create layer blob
 	layerBlobData, err = base64.StdEncoding.DecodeString(layerBase64String)
 	if err != nil {
 		log.Fatal(err)
@@ -424,8 +430,31 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	testManifestSubjectDigest = godigest.FromBytes(testManifestSubjectContent).String()
+
+	// Manifest with 4 Megabytes
+	testBlob4MBDigest, testBlob4MB := randomBlob(4194304, seed+1)
+	testBlob4MBLength = strconv.Itoa(len(testBlob4MB))
+	testManifest4MB := manifest{
+		SchemaVersion: 2,
+		MediaType:     "application/vnd.oci.image.manifest.v1+json",
+		Config: descriptor{
+			MediaType: "application/vnd.oci.image.config.v1+json",
+			Digest:    godigest.FromBytes(configs[0].Content),
+			Size:      int64(len(configs[0].Content)),
+			Data:      configs[0].Content, // must be the config content.
+		},
+		Layers: []descriptor{{
+			MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
+			Size:      int64(len(testBlob4MB)), //4MB
+			Digest:    testBlob4MBDigest,
+		}},
+	}
+	testManifest4MBContent, err = json.MarshalIndent(&testManifest4MB, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+	testManifest4MBDigest = godigest.FromBytes(testManifest4MBContent).String()
 
 	// Index manifest
 	manifestContentLength, err := strconv.Atoi(manifests[0].ContentLength)

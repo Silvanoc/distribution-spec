@@ -519,6 +519,45 @@ var test02Push = func() {
 
 		})
 
+		g.Context("Manifest Upload with 4MB", func() {
+			g.Specify("Registry should accept at least 4MB manifest", func() {
+				SkipIfDisabled(push)
+				Expect(aResponse).ToNot(BeNil())
+
+				// Populate registry with test layer blob
+				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
+					SetHeader("Content-Length", testBlob4MBLength).
+					SetHeader("Content-Type", "application/octet-stream").
+					SetQueryParam("digest", testBlob4MBDigest).
+					SetBody(testBlob4MB)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), getErrorsInfo(resp))
+
+				// Populate registry with test manifest
+				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(testManifest4MBDigest)).
+					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+					SetBody(testManifest4MBContent)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), getErrorsInfo(resp))
+
+				req = client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>",
+					reggie.WithDigest(testManifest4MBDigest))
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
+			})
+		})
+
 		g.Context("Manifest Upload with subject", func() {
 			g.Specify("Registry should accept a manifest with subject [OCI-Image v1.1]", func() {
 				SkipIfDisabled(push)
@@ -648,7 +687,7 @@ var test02Push = func() {
 						refsIndexArtifactDigest, manifests[0].Digest,
 						manifests[1].Digest, testManifestConfigTypeDigest,
 						testManifestArtifactTypeDigest, emptyConfigManifestDigest,
-						testManifestSubjectDigest}
+						testManifestSubjectDigest, testManifest4MBDigest}
 					for _, digest := range manifestDigests {
 						req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>",
 							reggie.WithDigest(digest))
@@ -709,7 +748,7 @@ var test02Push = func() {
 			g.Specify("Delete config blob created in tests", func() {
 				SkipIfDisabled(push)
 				RunOnlyIf(runPushSetup)
-				blobDigests := []string{configs[0].Digest, configs[1].Digest}
+				blobDigests := []string{configs[0].Digest, configs[1].Digest, testBlob4MBDigest}
 				for _, digest := range blobDigests {
 					req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>",
 						reggie.WithDigest(digest))
