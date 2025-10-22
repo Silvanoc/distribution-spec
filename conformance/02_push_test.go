@@ -524,20 +524,39 @@ var test02Push = func() {
 				SkipIfDisabled(push)
 				Expect(aResponse).ToNot(BeNil())
 
-				// Populate registry with test layer blob
+				// Populate registry with test config blob
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
-					SetHeader("Content-Length", testBlob4MBLength).
+					SetQueryParam("digest", configs[0].Digest).
 					SetHeader("Content-Type", "application/octet-stream").
-					SetQueryParam("digest", testBlob4MBDigest).
-					SetBody(testBlob4MB)
+					SetHeader("Content-Length", configs[0].ContentLength).
+					SetBody(configs[0].Content)
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
 					BeNumerically(">=", 200),
 					BeNumerically("<", 300)), getErrorsInfo(resp))
+
+				// Populate registry with test layer blob
+				req = client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				req = client.NewRequest(reggie.PATCH, resp.GetRelativeLocation()).
+					SetHeader("Content-Type", "application/octet-stream").
+					SetBody(testBlob4MB)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted), getErrorsInfo(resp))
+				lastResponse = resp
+				req = client.NewRequest(reggie.PUT, lastResponse.GetRelativeLocation()).
+					SetQueryParam("digest", testBlob4MBDigest).
+					SetHeader("Content-Type", "application/octet-stream").
+					SetHeader("Content-Length", testBlob4MBLength)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusCreated), getErrorsInfo(resp))
 
 				// Populate registry with test manifest
 				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
@@ -549,12 +568,6 @@ var test02Push = func() {
 				Expect(resp.StatusCode()).To(SatisfyAll(
 					BeNumerically(">=", 200),
 					BeNumerically("<", 300)), getErrorsInfo(resp))
-
-				req = client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>",
-					reggie.WithDigest(testManifest4MBDigest))
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
 			})
 		})
 
@@ -563,7 +576,7 @@ var test02Push = func() {
 				SkipIfDisabled(push)
 				Expect(aResponse).ToNot(BeNil())
 
-				// Populate registry with test blob
+				// Populate registry with test config blob
 				SkipIfDisabled(push)
 				RunOnlyIf(runPushSetup)
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
@@ -598,7 +611,9 @@ var test02Push = func() {
 					reggie.WithDigest(manifests[0].Digest))
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), getErrorsInfo(resp))
 
 				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(testManifestSubjectDigest)).

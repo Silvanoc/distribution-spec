@@ -310,12 +310,12 @@ func init() {
 
 	// PUSH Test
 	// create manifest for push test
+	emptyJSONBlob = []byte("{}")
 	emptyJSONDescriptor = descriptor{
 		MediaType: "application/vnd.oci.empty.v1+json",
 		Size:      int64(len(emptyJSONBlob)),
 		Digest:    godigest.FromBytes(emptyJSONBlob),
 	}
-	emptyJSONBlob = []byte("{}")
 
 	nonexistentManifest = ".INVALID_MANIFEST_NAME"
 	invalidManifestContent = []byte("blablabla")
@@ -449,21 +449,23 @@ func init() {
 	testManifestSubjectDigest = godigest.FromBytes(testManifestSubjectContent).String()
 
 	// Manifest with 4 Megabytes
-	testBlob4MBDigest, testBlob4MB := randomBlob(4194304, seed+1)
+	digest4MB, blob4MB := randomBlob(4*1024*1024, seed+1)
+	testBlob4MB = blob4MB
+	testBlob4MBDigest = digest4MB.String()
 	testBlob4MBLength = strconv.Itoa(len(testBlob4MB))
 	testManifest4MB := manifest{
 		SchemaVersion: 2,
 		MediaType:     "application/vnd.oci.image.manifest.v1+json",
 		Config: descriptor{
 			MediaType: "application/vnd.oci.image.config.v1+json",
-			Digest:    godigest.FromBytes(configs[0].Content),
+			Digest:    godigest.Digest(configs[0].Digest),
 			Size:      int64(len(configs[0].Content)),
-			Data:      configs[0].Content, // must be the config content.
+			Data:      configs[0].Content,
 		},
 		Layers: []descriptor{{
 			MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
-			Size:      int64(len(testBlob4MB)), //4MB
-			Digest:    testBlob4MBDigest,
+			Size:      int64(len(blob4MB)), //4MB
+			Digest:    digest4MB,
 		}},
 	}
 	testManifest4MBContent, err = json.MarshalIndent(&testManifest4MB, "", "\t")
