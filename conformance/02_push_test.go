@@ -571,6 +571,26 @@ var test02Push = func() {
 			})
 		})
 
+		for i, t := range testMediaTypes {
+			index := i
+			g.Context(fmt.Sprintf("Manifest Upload with Layer MediaType: %s", t), func() {
+				g.Specify(fmt.Sprintf("Registry should accept Layer MediaType: %s", t), func() {
+					SkipIfDisabled(push)
+					m := testTarManifestContent[index]
+					d := testTarDigest[index]
+					req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+						reggie.WithReference(d)).
+						SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+						SetBody(m)
+					resp, err := client.Do(req)
+					Expect(err).To(BeNil())
+					Expect(resp.StatusCode()).To(SatisfyAll(
+						BeNumerically(">=", 200),
+						BeNumerically("<", 300)), getErrorsInfo(resp))
+				})
+			})
+		}
+
 		g.Context("Manifest Upload with subject", func() {
 			g.Specify("Registry should accept a manifest with subject [OCI-Image v1.1]", func() {
 				SkipIfDisabled(push)

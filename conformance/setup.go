@@ -131,6 +131,9 @@ var (
 	testBlob4MB                        []byte
 	testAnnotationKey                  string
 	testAnnotationValues               map[string]string
+	testMediaTypes                     []string
+	testTarManifestContent             [][]byte
+	testTarDigest                      []string
 	client                             *reggie.Client
 	crossmountNamespace                string
 	dummyDigest                        string
@@ -399,6 +402,39 @@ func init() {
 
 	testManifestConfigTypeDigest = godigest.FromBytes(testManifestConfigTypeContent).String()
 	testAnnotationValues[testManifestConfigTypeDigest] = testManifestConfigType.Annotations[testAnnotationKey]
+
+	// create layer blobs for different tar MediaType
+	testMediaTypes = []string{
+		"application/vnd.oci.image.layer.v1.tar",
+		"application/vnd.oci.image.layer.v1.tar+gzip",
+		"application/vnd.oci.image.layer.nondistributable.v1.tar",
+		"application/vnd.oci.image.layer.nondistributable.v1.tar+gzip",
+		"application/vnd.oci.image.layer.v1.tar+zstd",
+	}
+	for _, t := range testMediaTypes {
+		newManifest := manifest{
+			SchemaVersion: 2,
+			MediaType:     "application/vnd.oci.image.manifest.v1+json",
+			Config: descriptor{
+				MediaType: "application/vnd.oci.image.config.v1+json",
+				Digest:    godigest.Digest(configs[0].Digest),
+				Size:      int64(len(configs[0].Content)),
+				Data:      configs[0].Content,
+			},
+			Layers: []descriptor{{
+				MediaType: t,
+				Size:      int64(len(layerBlobData)),
+				Digest:    layerBlobDigestRaw,
+			}},
+		}
+		testManifestArtifactTypeContent, err = json.MarshalIndent(&newManifest, "", "\t")
+		if err != nil {
+			log.Fatal(err)
+		}
+		testTarManifestContent = append(testTarManifestContent, testManifestArtifactTypeContent)
+		testManifestArtifactTypeDigest = godigest.FromBytes(testManifestArtifactTypeContent).String()
+		testTarDigest = append(testTarDigest, testManifestArtifactTypeDigest)
+	}
 
 	// artifact with Subject ref using ArtifactType, config.MediaType = emptyJSON
 	testManifestArtifactType := manifest{
