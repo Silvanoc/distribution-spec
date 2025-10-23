@@ -549,6 +549,22 @@ var test02Push = func() {
 
 		})
 
+		g.Context("Manifest Upload with annotations", func() {
+			g.Specify("Registry should accept annotations", func() {
+				SkipIfDisabled(push)
+
+				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(testManifestAnnotationDigest)).
+					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+					SetBody(testManifestAnnotationContent)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), getErrorsInfo(resp))
+			})
+		})
+
 		g.Context("Manifest Upload with 4MB", func() {
 			g.Specify("Registry should accept at least 4MB manifest", func() {
 				SkipIfDisabled(push)

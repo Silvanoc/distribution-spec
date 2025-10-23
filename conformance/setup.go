@@ -134,6 +134,8 @@ var (
 	testMediaTypes                     []string
 	testTarManifestContent             [][]byte
 	testTarDigest                      []string
+	testManifestAnnotationContent      []byte
+	testManifestAnnotationDigest       string
 	client                             *reggie.Client
 	crossmountNamespace                string
 	dummyDigest                        string
@@ -392,9 +394,6 @@ func init() {
 			Digest:    godigest.FromBytes(testRefBlobA),
 		},
 		Layers: layers,
-		Annotations: map[string]string{
-			testAnnotationKey: "test config a",
-		},
 	}
 
 	testManifestConfigTypeContent, err = json.MarshalIndent(&testManifestConfigType, "", "\t")
@@ -403,7 +402,6 @@ func init() {
 	}
 
 	testManifestConfigTypeDigest = godigest.FromBytes(testManifestConfigTypeContent).String()
-	testAnnotationValues[testManifestConfigTypeDigest] = testManifestConfigType.Annotations[testAnnotationKey]
 
 	// Manifest with custom layer media type
 	testManifestLayerType := manifest{
@@ -473,9 +471,6 @@ func init() {
 			Digest:    godigest.FromBytes(testRefBlobA),
 		},
 		Layers: layers,
-		Annotations: map[string]string{
-			testAnnotationKey: "test layer a",
-		},
 	}
 
 	testManifestArtifactTypeContent, err = json.MarshalIndent(&testManifestArtifactType, "", "\t")
@@ -484,7 +479,6 @@ func init() {
 	}
 
 	testManifestArtifactTypeDigest = godigest.FromBytes(testManifestArtifactTypeContent).String()
-	testAnnotationValues[testManifestArtifactTypeDigest] = testManifestArtifactType.Annotations[testAnnotationKey]
 
 	//Manifest with Subject
 	testManifestSubject := manifest{
@@ -509,6 +503,27 @@ func init() {
 		log.Fatal(err)
 	}
 	testManifestSubjectDigest = godigest.FromBytes(testManifestSubjectContent).String()
+
+	// Manifest with Annotations
+	testManifestAnnotation := manifest{
+		SchemaVersion: 2,
+		MediaType:     "application/vnd.oci.image.manifest.v1+json",
+		Config: descriptor{
+			MediaType: "application/vnd.oci.image.config.v1+json",
+			Digest:    godigest.Digest(configs[0].Digest),
+			Size:      int64(len(configs[0].Content)),
+		},
+		Layers: layers,
+		Annotations: map[string]string{
+			testAnnotationKey: "test annotation",
+		},
+	}
+	testManifestAnnotationContent, err = json.MarshalIndent(&testManifestAnnotation, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+	testManifestAnnotationDigest = godigest.FromBytes(testManifestAnnotationContent).String()
+	testAnnotationValues[testManifestAnnotationDigest] = testManifestAnnotation.Annotations[testAnnotationKey]
 
 	// Manifest with 4 Megabytes
 	digest4MB, blob4MB := randomBlob(4*1024*1024, seed+1)
