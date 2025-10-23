@@ -172,6 +172,8 @@ var (
 	testManifestArtifactTypeDigest     string
 	testManifestConfigTypeContent      []byte
 	testManifestConfigTypeDigest       string
+	testManifestLayerTypeContent       []byte
+	testManifestLayerTypeDigest        string
 	testManifestSubjectContent         []byte
 	testManifestSubjectDigest          string
 	testManifest4MBContent             []byte
@@ -380,7 +382,7 @@ func init() {
 	}
 	emptyConfigManifestDigest = string(godigest.FromBytes(emptyConfigManifestContent))
 
-	// Manifest with artifact using config.MediaType = artifactType
+	// Manifest with artifact using custom config.MediaType = artifactType
 	testManifestConfigType := manifest{
 		SchemaVersion: 2,
 		MediaType:     "application/vnd.oci.image.manifest.v1+json",
@@ -403,7 +405,31 @@ func init() {
 	testManifestConfigTypeDigest = godigest.FromBytes(testManifestConfigTypeContent).String()
 	testAnnotationValues[testManifestConfigTypeDigest] = testManifestConfigType.Annotations[testAnnotationKey]
 
-	// create layer blobs for different tar MediaType
+	// Manifest with custom layer media type
+	testManifestLayerType := manifest{
+		SchemaVersion: 2,
+		MediaType:     "application/vnd.oci.image.manifest.v1+json",
+		Config: descriptor{
+			MediaType: "application/vnd.oci.image.config.v1+json",
+			Digest:    godigest.Digest(configs[0].Digest),
+			Size:      int64(len(configs[0].Content)),
+			Data:      configs[0].Content,
+		},
+		Layers: []descriptor{{
+			MediaType: testRefArtifactTypeA,
+			Size:      int64(len(testRefBlobA)),
+			Digest:    godigest.FromBytes(testRefBlobA),
+		}},
+	}
+
+	testManifestLayerTypeContent, err = json.MarshalIndent(&testManifestLayerType, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	testManifestLayerTypeDigest = godigest.FromBytes(testManifestLayerTypeContent).String()
+
+	// Manifests for different tar MediaType
 	testMediaTypes = []string{
 		"application/vnd.oci.image.layer.v1.tar",
 		"application/vnd.oci.image.layer.v1.tar+gzip",

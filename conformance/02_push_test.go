@@ -486,6 +486,36 @@ var test02Push = func() {
 			})
 		})
 
+		g.Context("Manifest Upload with custom Layer MediaType", func() {
+			g.Specify("Registry should accept custom Layer MediaType", func() {
+				SkipIfDisabled(push)
+				// Populate registry with test config blob
+				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
+					SetQueryParam("digest", configs[0].Digest).
+					SetHeader("Content-Type", "application/octet-stream").
+					SetHeader("Content-Length", configs[0].ContentLength).
+					SetBody(configs[0].Content)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), getErrorsInfo(resp))
+
+				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(testManifestLayerTypeDigest)).
+					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+					SetBody(testManifestLayerTypeContent)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), getErrorsInfo(resp))
+			})
+		})
+
 		g.Context("Manifest Upload with custom artifactType", func() {
 			g.Specify("Registry should accept a manifest upload with custom artifactType [OCI-Image v1.1]", func() {
 				SkipIfDisabled(push)
@@ -524,24 +554,9 @@ var test02Push = func() {
 				SkipIfDisabled(push)
 				Expect(aResponse).ToNot(BeNil())
 
-				// Populate registry with test config blob
+				// Populate registry with test layer blob
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
 				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
-					SetQueryParam("digest", configs[0].Digest).
-					SetHeader("Content-Type", "application/octet-stream").
-					SetHeader("Content-Length", configs[0].ContentLength).
-					SetBody(configs[0].Content)
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)), getErrorsInfo(resp))
-
-				// Populate registry with test layer blob
-				req = client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
-				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				req = client.NewRequest(reggie.PATCH, resp.GetRelativeLocation()).
 					SetHeader("Content-Type", "application/octet-stream").
@@ -722,7 +737,9 @@ var test02Push = func() {
 						refsIndexArtifactDigest, manifests[0].Digest,
 						manifests[1].Digest, testManifestConfigTypeDigest,
 						testManifestArtifactTypeDigest, emptyConfigManifestDigest,
-						testManifestSubjectDigest, testManifest4MBDigest}
+						testManifestSubjectDigest, testManifest4MBDigest,
+						testManifestLayerTypeDigest}
+					manifestDigests = append(manifestDigests, testTarDigest...)
 					for _, digest := range manifestDigests {
 						req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>",
 							reggie.WithDigest(digest))
