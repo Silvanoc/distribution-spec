@@ -733,9 +733,9 @@ var test02Push = func() {
 
 				// Populate registry with test index
 				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
-					reggie.WithReference(refsIndexArtifactDigest)).
+					reggie.WithReference(testIndexArtifactDigest)).
 					SetHeader("Content-Type", "application/vnd.oci.image.index.v1+json").
-					SetBody(refsIndexArtifactContent)
+					SetBody(testIndexArtifactContent)
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
@@ -748,9 +748,9 @@ var test02Push = func() {
 
 				// Populate registry with test index
 				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
-					reggie.WithReference(refsNestedIndexArtifactDigest)).
+					reggie.WithReference(testNestedIndexArtifactDigest)).
 					SetHeader("Content-Type", "application/vnd.oci.image.index.v1+json").
-					SetBody(refsNestedIndexArtifactContent)
+					SetBody(testNestedIndexArtifactContent)
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
@@ -765,8 +765,8 @@ var test02Push = func() {
 					SkipIfDisabled(push)
 					RunOnlyIf(runPushSetup)
 
-					manifestDigests := []string{refsNestedIndexArtifactDigest,
-						refsIndexArtifactDigest, manifests[0].Digest,
+					manifestDigests := []string{testNestedIndexArtifactDigest,
+						testIndexArtifactDigest, manifests[0].Digest,
 						manifests[1].Digest, testManifestConfigTypeDigest,
 						testManifestArtifactTypeDigest, emptyConfigManifestDigest,
 						testManifestSubjectDigest, testManifest4MBDigest,
@@ -896,10 +896,10 @@ var test02Push = func() {
 					SkipIfDisabled(push)
 					RunOnlyIf(runPushSetup)
 
-					manifestDigests := []string{refsNestedIndexArtifactDigest,
-						refsIndexArtifactDigest, manifests[0].Digest,
+					manifestDigests := []string{testNestedIndexArtifactDigest,
+						testIndexArtifactDigest, manifests[0].Digest,
 						manifests[1].Digest, testManifestConfigTypeDigest,
-						testManifestArtifactTypeDigest, refsManifestDLayerArtifactDigest}
+						testManifestArtifactTypeDigest}
 					for _, digest := range manifestDigests {
 						req := client.NewRequest(reggie.DELETE,
 							"/v2/<name>/manifests/<reference>",

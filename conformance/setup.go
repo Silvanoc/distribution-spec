@@ -163,15 +163,14 @@ var (
 	refsManifestBLayerArtifactDigest   string
 	refsManifestCLayerArtifactContent  []byte
 	refsManifestCLayerArtifactDigest   string
-	refsManifestDLayerArtifactDigest   string
-	refsIndexArtifactContent           []byte
-	refsIndexArtifactDigest            string
-	refsNestedIndexArtifactContent     []byte
-	refsNestedIndexArtifactDigest      string
 	reportJUnitFilename                string
 	reportHTMLFilename                 string
 	httpWriter                         *httpDebugWriter
 	testsToRun                         int
+	testIndexArtifactContent           []byte
+	testIndexArtifactDigest            string
+	testNestedIndexArtifactContent     []byte
+	testNestedIndexArtifactDigest      string
 	testManifestArtifactTypeContent    []byte
 	testManifestArtifactTypeDigest     string
 	testManifestConfigTypeContent      []byte
@@ -577,7 +576,7 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	refsIndexArtifact := index{
+	testIndexArtifact := index{
 		SchemaVersion: 2,
 		MediaType:     "application/vnd.oci.image.index.v1+json",
 		ArtifactType:  testRefArtifactTypeIndex,
@@ -588,39 +587,33 @@ func init() {
 				Digest:    godigest.Digest(manifests[0].Digest),
 			},
 		},
-		Annotations: map[string]string{
-			testAnnotationKey: "test index",
-		},
 	}
-	refsIndexArtifactContent, err = json.MarshalIndent(&refsIndexArtifact, "", "\t")
+	testIndexArtifactContent, err = json.MarshalIndent(&testIndexArtifact, "", "\t")
 	if err != nil {
 		log.Fatal(err)
 	}
-	refsIndexArtifactDigest = godigest.FromBytes(refsIndexArtifactContent).String()
+	testIndexArtifactDigest = godigest.FromBytes(testIndexArtifactContent).String()
 
-	// refsIndexArtifactContentLength := strconv.Itoa(len(refsIndexArtifactContent))
-	refsIndexArtifactContentLength := len(refsIndexArtifactContent)
+	// testIndexArtifactContentLength := strconv.Itoa(len(testIndexArtifactContent))
+	testIndexArtifactContentLength := len(testIndexArtifactContent)
 
 	// Nested index manifest
-	refsNestedIndexArtifact := index{
+	testNestedIndexArtifact := index{
 		SchemaVersion: 2,
 		MediaType:     "application/vnd.oci.image.index.v1+json",
 		Manifests: []descriptor{
 			{
 				MediaType: "application/vnd.oci.image.index.v1+json",
-				Size:      int64(refsIndexArtifactContentLength),
-				Digest:    godigest.Digest(refsIndexArtifactDigest),
+				Size:      int64(testIndexArtifactContentLength),
+				Digest:    godigest.Digest(testIndexArtifactDigest),
 			},
 		},
-		Annotations: map[string]string{
-			testAnnotationKey: "test index",
-		},
 	}
-	refsNestedIndexArtifactContent, err = json.MarshalIndent(&refsNestedIndexArtifact, "", "\t")
+	testNestedIndexArtifactContent, err = json.MarshalIndent(&testNestedIndexArtifact, "", "\t")
 	if err != nil {
 		log.Fatal(err)
 	}
-	refsNestedIndexArtifactDigest = godigest.FromBytes(refsNestedIndexArtifactContent).String()
+	testNestedIndexArtifactDigest = godigest.FromBytes(testNestedIndexArtifactContent).String()
 
 	// CONTENT DISCOVERY Test
 	// create manifests for referrers test (artifacts with Subject field set)
