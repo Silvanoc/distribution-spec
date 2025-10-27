@@ -1,6 +1,7 @@
 package conformance
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 
@@ -122,6 +123,21 @@ var test01Pull = func() {
 				SkipIfDisabled(pull)
 				req := client.NewRequest(reggie.HEAD, "/v2/<name>/blobs/<digest>",
 					reggie.WithDigest(configs[0].Digest))
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				if h := resp.Header().Get("Docker-Content-Digest"); h != "" {
+					Expect(h).To(Equal(configs[0].Digest))
+				}
+			})
+
+			g.Specify("HEAD request to existing blob with Range Header should yield 200", func() {
+				SkipIfDisabled(pull)
+				startByte := 0
+				endByte := 4
+				req := client.NewRequest(reggie.HEAD, "/v2/<name>/blobs/<digest>",
+					reggie.WithDigest(configs[0].Digest)).
+					SetHeader("Range", fmt.Sprintf("bytes=%d-%d", startByte, endByte))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
