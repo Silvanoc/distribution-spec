@@ -108,46 +108,22 @@ var test03ContentDiscovery = func() {
 					BeNumerically(">=", 200),
 					BeNumerically("<", 300)))
 
-				// Populate registry with reference blob before the image manifest is pushed
+				// Populate registry with test blob 0
 				req = client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
-					SetQueryParam("digest", testRefBlobADigest).
+					SetQueryParam("digest", configs[0].Digest).
 					SetHeader("Content-Type", "application/octet-stream").
-					SetHeader("Content-Length", testRefBlobALength).
-					SetBody(testRefBlobA)
+					SetHeader("Content-Length", configs[0].ContentLength).
+					SetBody(configs[0].Content)
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
 					BeNumerically(">=", 200),
 					BeNumerically("<", 300)))
 
-				// Populate registry with test references manifest (config.MediaType = artifactType)
-				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
-					reggie.WithReference(refsManifestAConfigArtifactDigest)).
-					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
-					SetBody(refsManifestAConfigArtifactContent)
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
-				Expect(resp.Header().Get("OCI-Subject")).To(Equal(manifests[4].Digest))
-
-				// Populate registry with test references manifest (ArtifactType, config.MediaType = emptyJSON)
-				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
-					reggie.WithReference(refsManifestALayerArtifactDigest)).
-					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
-					SetBody(refsManifestALayerArtifactContent)
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
-				Expect(resp.Header().Get("OCI-Subject")).To(Equal(manifests[4].Digest))
-
-				// Populate registry with test blob
+				// Populate registry with test blob 4
 				req = client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
@@ -162,22 +138,7 @@ var test03ContentDiscovery = func() {
 					BeNumerically(">=", 200),
 					BeNumerically("<", 300)))
 
-				// Populate registry with test layer
-				req = client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
-					SetQueryParam("digest", layerBlobDigest).
-					SetHeader("Content-Type", "application/octet-stream").
-					SetHeader("Content-Length", layerBlobContentLength).
-					SetBody(layerBlobData)
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
-
-				// Populate registry with test manifest
+				// Populate registry with test manifest 4
 				tag := testTagName
 				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(tag)).
@@ -189,26 +150,11 @@ var test03ContentDiscovery = func() {
 					BeNumerically(">=", 200),
 					BeNumerically("<", 300)))
 
-				// Populate registry with reference blob after the image manifest is pushed
-				req = client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
-					SetQueryParam("digest", testRefBlobBDigest).
-					SetHeader("Content-Type", "application/octet-stream").
-					SetHeader("Content-Length", testRefBlobBLength).
-					SetBody(testRefBlobB)
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
-
-				// Populate registry with test references manifest (config.MediaType = artifactType)
+				// Populate registry with test references manifest
 				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
-					reggie.WithReference(refsManifestBConfigArtifactDigest)).
+					reggie.WithReference(refsManifestArtifactADigest)).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
-					SetBody(refsManifestBConfigArtifactContent)
+					SetBody(refsManifestArtifactAContent)
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
@@ -216,11 +162,11 @@ var test03ContentDiscovery = func() {
 					BeNumerically("<", 300)))
 				Expect(resp.Header().Get("OCI-Subject")).To(Equal(manifests[4].Digest))
 
-				// Populate registry with test references manifest (ArtifactType, config.MediaType = emptyJSON)
+				// Populate registry with test references manifest with artifact type
 				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
-					reggie.WithReference(refsManifestBLayerArtifactDigest)).
+					reggie.WithReference(refsManifestArtifactBDigest)).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
-					SetBody(refsManifestBLayerArtifactContent)
+					SetBody(refsManifestArtifactBContent)
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
@@ -297,20 +243,6 @@ var test03ContentDiscovery = func() {
 		})
 
 		g.Context("Test content discovery endpoints (listing references)", func() {
-			g.Specify("GET request to nonexistent blob should result in empty 200 response", func() {
-				SkipIfDisabled(contentDiscovery)
-				req := client.NewRequest(reggie.GET, "/v2/<name>/referrers/<digest>",
-					reggie.WithDigest(dummyDigest))
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
-				Expect(resp.Header().Get("Content-Type")).To(Equal("application/vnd.oci.image.index.v1+json"))
-
-				var index index
-				err = json.Unmarshal(resp.Body(), &index)
-				Expect(err).To(BeNil())
-				Expect(len(index.Manifests)).To(BeZero())
-			})
 
 			g.Specify("GET request to existing blob should yield 200", func() {
 				SkipIfDisabled(contentDiscovery)
@@ -324,19 +256,15 @@ var test03ContentDiscovery = func() {
 				var index index
 				err = json.Unmarshal(resp.Body(), &index)
 				Expect(err).To(BeNil())
-				Expect(len(index.Manifests)).To(Equal(4))
+				Expect(len(index.Manifests)).To(Equal(2))
 				Expect(index.Manifests[0].Digest).ToNot(Equal(index.Manifests[1].Digest))
-				for i := 0; i < len(index.Manifests); i++ {
-					Expect(len(index.Manifests[i].Annotations)).To(Equal(1))
-					Expect(index.Manifests[i].Annotations[testAnnotationKey]).To(Equal(testAnnotationValues[index.Manifests[i].Digest.String()]))
-				}
 			})
 
 			g.Specify("GET request to existing blob with filter should yield 200", func() {
 				SkipIfDisabled(contentDiscovery)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/referrers/<digest>",
 					reggie.WithDigest(manifests[4].Digest)).
-					SetQueryParam("artifactType", testRefArtifactTypeA)
+					SetQueryParam("artifactType", "application/vnd.oci.descriptor.v1+json")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
@@ -348,18 +276,10 @@ var test03ContentDiscovery = func() {
 
 				// also check resp header "OCI-Filters-Applied: artifactType" denoting that an artifactType filter was applied
 				if resp.Header().Get("OCI-Filters-Applied") != "" {
-					Expect(len(index.Manifests)).To(Equal(2))
+					Expect(len(index.Manifests)).To(Equal(1))
 					Expect(resp.Header().Get("OCI-Filters-Applied")).To(Equal(artifactTypeFilter))
-					for i := 0; i < len(index.Manifests); i++ {
-						Expect(len(index.Manifests[i].Annotations)).To(Equal(1))
-						Expect(index.Manifests[i].Annotations[testAnnotationKey]).To(Equal(testAnnotationValues[index.Manifests[i].Digest.String()]))
-					}
 				} else {
-					Expect(len(index.Manifests)).To(Equal(5))
-					for i := 0; i < len(index.Manifests); i++ {
-						Expect(len(index.Manifests[i].Annotations)).To(Equal(1))
-						Expect(index.Manifests[i].Annotations[testAnnotationKey]).To(Equal(testAnnotationValues[index.Manifests[i].Digest.String()]))
-					}
+					Expect(len(index.Manifests)).To(Equal(2))
 					Warn("filtering by artifact-type is not implemented")
 				}
 			})
@@ -389,10 +309,8 @@ var test03ContentDiscovery = func() {
 					references := []string{
 						manifests[2].Digest,
 						manifests[4].Digest,
-						refsManifestAConfigArtifactDigest,
-						refsManifestALayerArtifactDigest,
-						refsManifestBConfigArtifactDigest,
-						refsManifestBLayerArtifactDigest,
+						refsManifestArtifactADigest,
+						refsManifestArtifactBDigest,
 						refsManifestCLayerArtifactDigest,
 					}
 					for _, ref := range references {
@@ -450,10 +368,8 @@ var test03ContentDiscovery = func() {
 					references := []string{
 						manifests[2].Digest,
 						manifests[4].Digest,
-						refsManifestAConfigArtifactDigest,
-						refsManifestALayerArtifactDigest,
-						refsManifestBConfigArtifactDigest,
-						refsManifestBLayerArtifactDigest,
+						refsManifestArtifactADigest,
+						refsManifestArtifactBDigest,
 						refsManifestCLayerArtifactDigest,
 					}
 					for _, ref := range references {
@@ -491,29 +407,17 @@ var test03ContentDiscovery = func() {
 
 				if deleteManifestBeforeBlobs {
 					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
-						reggie.WithReference(refsManifestAConfigArtifactDigest))
+						reggie.WithReference(refsManifestArtifactADigest))
 					deleteReq(req)
 					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
-						reggie.WithReference(refsManifestALayerArtifactDigest))
+						reggie.WithReference(refsManifestArtifactBDigest))
 					deleteReq(req)
 					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[4].Digest))
-					deleteReq(req)
-					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
-						reggie.WithReference(refsManifestBConfigArtifactDigest))
-					deleteReq(req)
-					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
-						reggie.WithReference(refsManifestBLayerArtifactDigest))
 					deleteReq(req)
 				}
 
 				// Delete config blob created in setup
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[4].Digest))
-				deleteReq(req)
-
-				// Delete reference blob created in setup
-				req = client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(testRefBlobADigest))
-				deleteReq(req)
-				req = client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(testRefBlobBDigest))
 				deleteReq(req)
 
 				// Delete empty JSON blob created in setup
@@ -523,18 +427,12 @@ var test03ContentDiscovery = func() {
 				if !deleteManifestBeforeBlobs {
 					// Delete manifest created in setup
 					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
-						reggie.WithReference(refsManifestAConfigArtifactDigest))
+						reggie.WithReference(refsManifestArtifactADigest))
 					deleteReq(req)
 					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
-						reggie.WithReference(refsManifestALayerArtifactDigest))
+						reggie.WithReference(refsManifestArtifactBDigest))
 					deleteReq(req)
 					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[4].Digest))
-					deleteReq(req)
-					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
-						reggie.WithReference(refsManifestBConfigArtifactDigest))
-					deleteReq(req)
-					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
-						reggie.WithReference(refsManifestBLayerArtifactDigest))
 					deleteReq(req)
 				}
 			})

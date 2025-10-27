@@ -106,93 +106,85 @@ var (
 		envVarContentManagement: contentManagement,
 	}
 
-	testBlobA                          []byte
-	testBlobALength                    string
-	testBlobADigest                    string
-	testRefBlobA                       []byte
-	testRefBlobALength                 string
-	testRefBlobADigest                 string
-	testRefArtifactTypeA               string
-	testRefArtifactTypeB               string
-	testRefArtifactTypeIndex           string
-	testRefBlobB                       []byte
-	testRefBlobBLength                 string
-	testRefBlobBDigest                 string
-	testBlobB                          []byte
-	testBlobBDigest                    string
-	testBlobBChunk1                    []byte
-	testBlobBChunk1Length              string
-	testBlobBChunk2                    []byte
-	testBlobBChunk2Length              string
-	testBlobBChunk1Range               string
-	testBlobBChunk2Range               string
-	testBlob4MBDigest                  string
-	testBlob4MBLength                  string
-	testBlob4MB                        []byte
-	testAnnotationKey                  string
-	testAnnotationValues               map[string]string
-	testMediaTypes                     []string
-	testTarManifestContent             [][]byte
-	testTarDigest                      []string
-	testManifestAnnotationContent      []byte
-	testManifestAnnotationDigest       string
-	client                             *reggie.Client
-	crossmountNamespace                string
-	dummyDigest                        string
-	errorCodes                         []string
-	invalidManifestContent             []byte
-	layerBlobData                      []byte
-	layerBlobDigest                    string
-	layerBlobContentLength             string
-	emptyLayerManifestContent          []byte
-	emptyLayerManifestDigest           string
-	emptyConfigManifestContent         []byte
-	emptyConfigManifestDigest          string
-	emptyMediaTypeManifestContent      []byte
-	emptyMediaTypeManifestDigest       string
-	nonexistentManifest                string
-	emptyJSONBlob                      []byte
-	emptyJSONDescriptor                descriptor
-	refsManifestAConfigArtifactContent []byte
-	refsManifestAConfigArtifactDigest  string
-	refsManifestALayerArtifactContent  []byte
-	refsManifestALayerArtifactDigest   string
-	refsManifestBConfigArtifactContent []byte
-	refsManifestBConfigArtifactDigest  string
-	refsManifestBLayerArtifactContent  []byte
-	refsManifestBLayerArtifactDigest   string
-	refsManifestCLayerArtifactContent  []byte
-	refsManifestCLayerArtifactDigest   string
-	reportJUnitFilename                string
-	reportHTMLFilename                 string
-	httpWriter                         *httpDebugWriter
-	testsToRun                         int
-	testIndexArtifactContent           []byte
-	testIndexArtifactDigest            string
-	testNestedIndexArtifactContent     []byte
-	testNestedIndexArtifactDigest      string
-	testManifestArtifactTypeContent    []byte
-	testManifestArtifactTypeDigest     string
-	testManifestConfigTypeContent      []byte
-	testManifestConfigTypeDigest       string
-	testManifestLayerTypeContent       []byte
-	testManifestLayerTypeDigest        string
-	testManifestSubjectContent         []byte
-	testManifestSubjectDigest          string
-	testManifest4MBContent             []byte
-	testManifest4MBDigest              string
-	suiteDescription                   string
-	runPullSetup                       bool
-	runPushSetup                       bool
-	runContentDiscoverySetup           bool
-	runContentManagementSetup          bool
-	deleteManifestBeforeBlobs          bool
-	runAutomaticCrossmountTest         bool
-	automaticCrossmountEnabled         bool
-	configs                            []TestBlob
-	manifests                          []TestBlob
-	seed                               int64
-	Version                            = "unknown"
+	testBlobA                         []byte
+	testBlobALength                   string
+	testBlobADigest                   string
+	testRefBlobA                      []byte
+	testRefBlobADigest                string
+	testRefArtifactTypeA              string
+	testRefArtifactTypeB              string
+	testRefArtifactTypeIndex          string
+	testBlobB                         []byte
+	testBlobBDigest                   string
+	testBlobBChunk1                   []byte
+	testBlobBChunk1Length             string
+	testBlobBChunk2                   []byte
+	testBlobBChunk2Length             string
+	testBlobBChunk1Range              string
+	testBlobBChunk2Range              string
+	testBlob4MBDigest                 string
+	testBlob4MBLength                 string
+	testBlob4MB                       []byte
+	testAnnotationKey                 string
+	testAnnotationValues              map[string]string
+	testMediaTypes                    []string
+	testTarManifestContent            [][]byte
+	testTarDigest                     []string
+	testManifestAnnotationContent     []byte
+	testManifestAnnotationDigest      string
+	client                            *reggie.Client
+	crossmountNamespace               string
+	dummyDigest                       string
+	errorCodes                        []string
+	invalidManifestContent            []byte
+	layerBlobData                     []byte
+	layerBlobDigest                   string
+	layerBlobContentLength            string
+	emptyLayerManifestContent         []byte
+	emptyLayerManifestDigest          string
+	emptyConfigManifestContent        []byte
+	emptyConfigManifestDigest         string
+	emptyMediaTypeManifestContent     []byte
+	emptyMediaTypeManifestDigest      string
+	nonexistentManifest               string
+	emptyJSONBlob                     []byte
+	emptyJSONDescriptor               descriptor
+	refsManifestCLayerArtifactContent []byte
+	refsManifestCLayerArtifactDigest  string
+	refsManifestArtifactAContent      []byte
+	refsManifestArtifactADigest       string
+	refsManifestArtifactBContent      []byte
+	refsManifestArtifactBDigest       string
+	reportJUnitFilename               string
+	reportHTMLFilename                string
+	httpWriter                        *httpDebugWriter
+	testsToRun                        int
+	testIndexArtifactContent          []byte
+	testIndexArtifactDigest           string
+	testNestedIndexArtifactContent    []byte
+	testNestedIndexArtifactDigest     string
+	testManifestArtifactTypeContent   []byte
+	testManifestArtifactTypeDigest    string
+	testManifestConfigTypeContent     []byte
+	testManifestConfigTypeDigest      string
+	testManifestLayerTypeContent      []byte
+	testManifestLayerTypeDigest       string
+	testManifestSubjectContent        []byte
+	testManifestSubjectDigest         string
+	testManifest4MBContent            []byte
+	testManifest4MBDigest             string
+	suiteDescription                  string
+	runPullSetup                      bool
+	runPushSetup                      bool
+	runContentDiscoverySetup          bool
+	runContentManagementSetup         bool
+	deleteManifestBeforeBlobs         bool
+	runAutomaticCrossmountTest        bool
+	automaticCrossmountEnabled        bool
+	configs                           []TestBlob
+	manifests                         []TestBlob
+	seed                              int64
+	Version                           = "unknown"
 )
 
 func init() {
@@ -336,16 +328,9 @@ func init() {
 	setupChunkedBlob(42)
 
 	testRefBlobA = []byte("NHL Peanut Butter on my NHL bagel")
-	testRefBlobALength = strconv.Itoa(len(testRefBlobA))
 	testRefBlobADigest = godigest.FromBytes(testRefBlobA).String()
 
 	testRefArtifactTypeA = "application/vnd.nhl.peanut.butter.bagel"
-
-	testRefBlobB = []byte("NBA Strawberry Jam on my NBA croissant")
-	testRefBlobBLength = strconv.Itoa(len(testRefBlobB))
-	testRefBlobBDigest = godigest.FromBytes(testRefBlobB).String()
-
-	testRefArtifactTypeB = "application/vnd.nba.strawberry.jam.croissant"
 
 	testAnnotationKey = "org.opencontainers.conformance.test"
 	testAnnotationValues = map[string]string{}
@@ -618,13 +603,12 @@ func init() {
 	// CONTENT DISCOVERY Test
 	// create manifests for referrers test (artifacts with Subject field set)
 	// artifact with Subject ref using config.MediaType = artifactType
-	refsManifestAConfigArtifact := manifest{
+	refsManifestArtifactA := manifest{
 		SchemaVersion: 2,
 		MediaType:     "application/vnd.oci.image.manifest.v1+json",
 		Config: descriptor{
-			MediaType: testRefArtifactTypeA,
-			Size:      int64(len(testRefBlobA)),
-			Digest:    godigest.FromBytes(testRefBlobA),
+			MediaType: "application/vnd.oci.image.config.v1+json",
+			Digest:    godigest.Digest(configs[0].Digest),
 		},
 		Subject: &descriptor{
 			MediaType: "application/vnd.oci.image.manifest.v1+json",
@@ -634,26 +618,22 @@ func init() {
 		Layers: []descriptor{
 			emptyJSONDescriptor,
 		},
-		Annotations: map[string]string{
-			testAnnotationKey: "test config a",
-		},
 	}
 
-	refsManifestAConfigArtifactContent, err = json.MarshalIndent(&refsManifestAConfigArtifact, "", "\t")
+	refsManifestArtifactAContent, err = json.MarshalIndent(&refsManifestArtifactA, "", "\t")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	refsManifestAConfigArtifactDigest = godigest.FromBytes(refsManifestAConfigArtifactContent).String()
-	testAnnotationValues[refsManifestAConfigArtifactDigest] = refsManifestAConfigArtifact.Annotations[testAnnotationKey]
+	refsManifestArtifactADigest = godigest.FromBytes(refsManifestArtifactAContent).String()
 
-	refsManifestBConfigArtifact := manifest{
+	refsManifestArtifactB := manifest{
 		SchemaVersion: 2,
 		MediaType:     "application/vnd.oci.image.manifest.v1+json",
+		ArtifactType:  "application/vnd.oci.descriptor.v1+json",
 		Config: descriptor{
-			MediaType: testRefArtifactTypeB,
-			Size:      int64(len(testRefBlobB)),
-			Digest:    godigest.FromBytes(testRefBlobB),
+			MediaType: "application/vnd.oci.image.config.v1+json",
+			Digest:    godigest.Digest(configs[0].Digest),
 		},
 		Subject: &descriptor{
 			MediaType: "application/vnd.oci.image.manifest.v1+json",
@@ -663,81 +643,16 @@ func init() {
 		Layers: []descriptor{
 			emptyJSONDescriptor,
 		},
-		Annotations: map[string]string{
-			testAnnotationKey: "test config b",
-		},
 	}
 
-	refsManifestBConfigArtifactContent, err = json.MarshalIndent(&refsManifestBConfigArtifact, "", "\t")
+	refsManifestArtifactBContent, err = json.MarshalIndent(&refsManifestArtifactB, "", "\t")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	refsManifestBConfigArtifactDigest = godigest.FromBytes(refsManifestBConfigArtifactContent).String()
-	testAnnotationValues[refsManifestBConfigArtifactDigest] = refsManifestBConfigArtifact.Annotations[testAnnotationKey]
+	refsManifestArtifactBDigest = godigest.FromBytes(refsManifestArtifactBContent).String()
 
-	// artifact with Subject ref using ArtifactType, config.MediaType = emptyJSON
-	refsManifestALayerArtifact := manifest{
-		SchemaVersion: 2,
-		MediaType:     "application/vnd.oci.image.manifest.v1+json",
-		ArtifactType:  testRefArtifactTypeA,
-		Config:        emptyJSONDescriptor,
-		Subject: &descriptor{
-			MediaType: "application/vnd.oci.image.manifest.v1+json",
-			Size:      int64(len(manifests[4].Content)),
-			Digest:    godigest.FromBytes(manifests[4].Content),
-		},
-		Layers: []descriptor{
-			{
-				MediaType: testRefArtifactTypeA,
-				Size:      int64(len(testRefBlobA)),
-				Digest:    godigest.FromBytes(testRefBlobA),
-			},
-		},
-		Annotations: map[string]string{
-			testAnnotationKey: "test layer a",
-		},
-	}
-
-	refsManifestALayerArtifactContent, err = json.MarshalIndent(&refsManifestALayerArtifact, "", "\t")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	refsManifestALayerArtifactDigest = godigest.FromBytes(refsManifestALayerArtifactContent).String()
-	testAnnotationValues[refsManifestALayerArtifactDigest] = refsManifestALayerArtifact.Annotations[testAnnotationKey]
-
-	refsManifestBLayerArtifact := manifest{
-		SchemaVersion: 2,
-		MediaType:     "application/vnd.oci.image.manifest.v1+json",
-		ArtifactType:  testRefArtifactTypeB,
-		Config:        emptyJSONDescriptor,
-		Subject: &descriptor{
-			MediaType: "application/vnd.oci.image.manifest.v1+json",
-			Size:      int64(len(manifests[4].Content)),
-			Digest:    godigest.FromBytes(manifests[4].Content),
-		},
-		Layers: []descriptor{
-			{
-				MediaType: testRefArtifactTypeB,
-				Size:      int64(len(testRefBlobB)),
-				Digest:    godigest.FromBytes(testRefBlobB),
-			},
-		},
-		Annotations: map[string]string{
-			testAnnotationKey: "test layer b",
-		},
-	}
-
-	refsManifestBLayerArtifactContent, err = json.MarshalIndent(&refsManifestBLayerArtifact, "", "\t")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	refsManifestBLayerArtifactDigest = godigest.FromBytes(refsManifestBLayerArtifactContent).String()
-	testAnnotationValues[refsManifestBLayerArtifactDigest] = refsManifestBLayerArtifact.Annotations[testAnnotationKey]
-
-	// ManifestCLayerArtifact is the same as B but based on a subject that has not been pushed
+	// ManifestCLayerArtifact based on a subject that has not been pushed
 	refsManifestCLayerArtifact := manifest{
 		SchemaVersion: 2,
 		MediaType:     "application/vnd.oci.image.manifest.v1+json",
@@ -748,13 +663,7 @@ func init() {
 			Size:      int64(len(manifests[3].Content)),
 			Digest:    godigest.FromBytes(manifests[3].Content),
 		},
-		Layers: []descriptor{
-			{
-				MediaType: testRefArtifactTypeB,
-				Size:      int64(len(testRefBlobB)),
-				Digest:    godigest.FromBytes(testRefBlobB),
-			},
-		},
+		Layers: layers,
 	}
 
 	refsManifestCLayerArtifactContent, err = json.MarshalIndent(&refsManifestCLayerArtifact, "", "\t")

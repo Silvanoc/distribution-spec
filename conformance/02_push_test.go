@@ -476,7 +476,7 @@ var test02Push = func() {
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
-					SetQueryParam("digest", godigest.FromBytes(testRefBlobA).String()).
+					SetQueryParam("digest", testRefBlobADigest).
 					SetHeader("Content-Type", "application/octet-stream").
 					SetHeader("Content-Length", strconv.Itoa(len(testRefBlobA))).
 					SetBody(testRefBlobA)
@@ -832,7 +832,7 @@ var test02Push = func() {
 			g.Specify("Delete config blob created in tests", func() {
 				SkipIfDisabled(push)
 				RunOnlyIf(runPushSetup)
-				blobDigests := []string{configs[0].Digest, configs[1].Digest}
+				blobDigests := []string{configs[0].Digest, configs[1].Digest, testRefBlobADigest}
 				for _, digest := range blobDigests {
 					req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>",
 						reggie.WithDigest(digest))
