@@ -148,6 +148,8 @@ var (
 	emptyLayerManifestDigest           string
 	emptyConfigManifestContent         []byte
 	emptyConfigManifestDigest          string
+	emptyMediaTypeManifestContent      []byte
+	emptyMediaTypeManifestDigest       string
 	nonexistentManifest                string
 	emptyJSONBlob                      []byte
 	emptyJSONDescriptor                descriptor
@@ -348,6 +350,25 @@ func init() {
 
 	testAnnotationKey = "org.opencontainers.conformance.test"
 	testAnnotationValues = map[string]string{}
+
+	// manifest with empty mediatype
+	emptyMediaTypeManifest := manifest{
+		SchemaVersion: 2,
+		MediaType:     "application/vnd.oci.empty.v1+json",
+		ArtifactType:  "application/vnd.oci.image.manifest.v1+json",
+		Config: descriptor{
+			MediaType: "application/vnd.oci.image.config.v1+json",
+			Digest:    godigest.Digest(configs[0].Digest),
+			Size:      int64(len(configs[0].Content)),
+		},
+		Layers: layers,
+	}
+	emptyMediaTypeManifestContent, err = json.MarshalIndent(&emptyMediaTypeManifest, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+	emptyMediaTypeManifestDigest = string(godigest.FromBytes(emptyMediaTypeManifestContent))
+
 	// manifest with empty layer
 	emptyLayerManifest := manifest{
 		SchemaVersion: 2,

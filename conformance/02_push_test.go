@@ -413,6 +413,36 @@ var test02Push = func() {
 				}
 			})
 
+			g.Specify("Registry should accept a manifest upload with empty MediaType but specified ArtifactType", func() {
+				SkipIfDisabled(push)
+				// Populate registry with test config blob
+				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
+					SetQueryParam("digest", configs[0].Digest).
+					SetHeader("Content-Type", "application/octet-stream").
+					SetHeader("Content-Length", configs[0].ContentLength).
+					SetBody(configs[0].Content)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), getErrorsInfo(resp))
+
+				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(emptyMediaTypeManifestDigest)).
+					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+					SetBody(emptyMediaTypeManifestContent)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				if resp.StatusCode() == http.StatusCreated {
+					Expect(resp.StatusCode()).To(Equal(http.StatusCreated), getErrorsInfo(resp))
+				} else {
+					Warn("image manifest with empty Mediatype but specified ArtifactType is not supported")
+				}
+			})
+
 			g.Specify("Registry should accept a manifest upload with empty config", func() {
 				SkipIfDisabled(push)
 				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
@@ -489,26 +519,12 @@ var test02Push = func() {
 		g.Context("Manifest Upload with custom Layer MediaType", func() {
 			g.Specify("Registry should accept custom Layer MediaType", func() {
 				SkipIfDisabled(push)
-				// Populate registry with test config blob
-				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
-					SetQueryParam("digest", configs[0].Digest).
-					SetHeader("Content-Type", "application/octet-stream").
-					SetHeader("Content-Length", configs[0].ContentLength).
-					SetBody(configs[0].Content)
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)), getErrorsInfo(resp))
 
-				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(testManifestLayerTypeDigest)).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
 					SetBody(testManifestLayerTypeContent)
-				resp, err = client.Do(req)
+				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
 					BeNumerically(">=", 200),
