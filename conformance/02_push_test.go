@@ -568,6 +568,7 @@ var test02Push = func() {
 		g.Context("Manifest Upload with annotations", func() {
 			g.Specify("Registry should accept annotations", func() {
 				SkipIfDisabled(push)
+				supportAnnotation = false
 
 				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(testManifestAnnotationDigest)).
@@ -578,6 +579,9 @@ var test02Push = func() {
 				Expect(resp.StatusCode()).To(SatisfyAll(
 					BeNumerically(">=", 200),
 					BeNumerically("<", 300)), getErrorsInfo(resp))
+				if resp.StatusCode() >= 200 && resp.StatusCode() < 300 {
+					supportAnnotation = true
+				}
 			})
 		})
 
@@ -642,6 +646,7 @@ var test02Push = func() {
 			g.Specify("Registry should accept a manifest with subject [OCI-Image v1.1]", func() {
 				SkipIfDisabled(push)
 				Expect(aResponse).ToNot(BeNil())
+				supportSubject = false
 
 				// Populate registry with test config blob
 				SkipIfDisabled(push)
@@ -693,6 +698,9 @@ var test02Push = func() {
 					BeNumerically("<", 300)), getErrorsInfo(resp))
 				Expect(resp.Header().Get("OCI-Subject")).To(Equal(godigest.FromBytes(manifests[0].Content).String()),
 					"The expected 'OCI-Subject' is missing in the headers")
+				if resp.StatusCode() >= 200 && resp.StatusCode() < 300 && resp.Header().Get("OCI-Subject") == godigest.FromBytes(manifests[0].Content).String() {
+					supportSubject = true
+				}
 			})
 		})
 

@@ -155,6 +155,8 @@ var (
 	refsManifestArtifactADigest       string
 	refsManifestArtifactBContent      []byte
 	refsManifestArtifactBDigest       string
+	refsManifestCopyAnnotationContent []byte
+	refsManifestCopyAnnotationDigest  string
 	reportJUnitFilename               string
 	reportHTMLFilename                string
 	httpWriter                        *httpDebugWriter
@@ -185,6 +187,8 @@ var (
 	manifests                         []TestBlob
 	seed                              int64
 	Version                           = "unknown"
+	supportSubject                    bool
+	supportAnnotation                 bool
 )
 
 func init() {
@@ -602,7 +606,7 @@ func init() {
 
 	// CONTENT DISCOVERY Test
 	// create manifests for referrers test (artifacts with Subject field set)
-	// artifact with Subject ref using config.MediaType = artifactType
+	// artifact with Subject ref using default media type
 	refsManifestArtifactA := manifest{
 		SchemaVersion: 2,
 		MediaType:     "application/vnd.oci.image.manifest.v1+json",
@@ -627,6 +631,7 @@ func init() {
 
 	refsManifestArtifactADigest = godigest.FromBytes(refsManifestArtifactAContent).String()
 
+	// manifest using different artifact type compared with A
 	refsManifestArtifactB := manifest{
 		SchemaVersion: 2,
 		MediaType:     "application/vnd.oci.image.manifest.v1+json",
@@ -651,6 +656,28 @@ func init() {
 	}
 
 	refsManifestArtifactBDigest = godigest.FromBytes(refsManifestArtifactBContent).String()
+
+	// Manifest refers manifest with Annotations
+	refsManifestCopyAnnotation := manifest{
+		SchemaVersion: 2,
+		MediaType:     "application/vnd.oci.image.manifest.v1+json",
+		Config: descriptor{
+			MediaType: "application/vnd.oci.image.config.v1+json",
+			Digest:    godigest.Digest(configs[0].Digest),
+			Size:      int64(len(configs[0].Content)),
+		},
+		Layers: layers,
+		Subject: &descriptor{
+			MediaType: "application/vnd.oci.image.manifest.v1+json",
+			Size:      int64(len(testManifestAnnotationContent)),
+			Digest:    godigest.FromBytes(testManifestAnnotationContent),
+		},
+	}
+	refsManifestCopyAnnotationContent, err = json.MarshalIndent(&refsManifestCopyAnnotation, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+	refsManifestCopyAnnotationDigest = godigest.FromBytes(refsManifestCopyAnnotationContent).String()
 
 	// ManifestCLayerArtifact based on a subject that has not been pushed
 	refsManifestCLayerArtifact := manifest{

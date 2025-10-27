@@ -174,6 +174,28 @@ var test03ContentDiscovery = func() {
 					BeNumerically("<", 300)))
 				Expect(resp.Header().Get("OCI-Subject")).To(Equal(manifests[4].Digest))
 
+				// Populate registry with test manifests with annotations
+				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(testManifestAnnotationDigest)).
+					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+					SetBody(testManifestAnnotationContent)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), getErrorsInfo(resp))
+
+				// Populate registry with test references manifest refers to manifest with annotations
+				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(refsManifestCopyAnnotationDigest)).
+					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+					SetBody(refsManifestCopyAnnotationContent)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)), getErrorsInfo(resp))
+
 				// Populate registry with test references manifest to a non-existent subject
 				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(refsManifestCLayerArtifactDigest)).
@@ -298,6 +320,28 @@ var test03ContentDiscovery = func() {
 				Expect(err).To(BeNil())
 				Expect(len(index.Manifests)).To(Equal(1))
 				Expect(index.Manifests[0].Digest.String()).To(Equal(refsManifestCLayerArtifactDigest))
+			})
+		})
+
+		g.Context("Manifest copy the annotations of the subject", func() {
+			g.Specify("Registry should copy the annotations of the subject", func() {
+				SkipIfDisabled(contentDiscovery)
+				if !supportAnnotation || !supportSubject {
+					SkipIfDisabled(0)
+				}
+
+				req := client.NewRequest(reggie.GET, "/v2/<name>/referrers/<digest>",
+					reggie.WithDigest(testManifestAnnotationDigest))
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				Expect(resp.Header().Get("Content-Type")).To(Equal("application/vnd.oci.image.index.v1+json"))
+
+				var index index
+				err = json.Unmarshal(resp.Body(), &index)
+				Expect(err).To(BeNil())
+				Expect(len(index.Manifests)).To(Equal(1))
+				Expect(index.Manifests[0].Annotations[testAnnotationKey]).To(Equal(testAnnotationValues[testManifestAnnotationDigest]))
 			})
 		})
 
