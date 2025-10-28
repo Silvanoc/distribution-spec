@@ -337,7 +337,7 @@ var test02Push = func() {
 				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound), getErrorsInfo(resp))
 			})
 
-			g.Specify("PUT should accept a manifest upload", func() {
+			g.Specify("PUT request with a manifest should return 201", func() {
 				SkipIfDisabled(push)
 				for i := 0; i < 4; i++ {
 					tag := fmt.Sprintf("test%d", i)
@@ -356,7 +356,7 @@ var test02Push = func() {
 				}
 			})
 
-			g.Specify("Registry should accept a manifest upload with no layers", func() {
+			g.Specify("PUT request with a manifest with empty layer should return 201", func() {
 				SkipIfDisabled(push)
 				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(emptyLayerTestTag)).
@@ -374,7 +374,7 @@ var test02Push = func() {
 				}
 			})
 
-			g.Specify("Registry should accept a manifest upload with empty MediaType but specified ArtifactType", func() {
+			g.Specify("PUT request with a manifest with empty MediaType but specified ArtifactType should return 201", func() {
 				SkipIfDisabled(push)
 				// Populate registry with test config blob
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
@@ -404,7 +404,7 @@ var test02Push = func() {
 				}
 			})
 
-			g.Specify("Registry should accept a manifest upload with empty config", func() {
+			g.Specify("PUT request with a manifest with empty config should return 201", func() {
 				SkipIfDisabled(push)
 				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(emptyConfigManifestDigest)).
@@ -460,7 +460,7 @@ var test02Push = func() {
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK), getErrorsInfo(resp))
 			})
 
-			g.Specify("Registry should accept a manifest upload with custom config/mediaType (as artifact type) [OCI-Image v1.1]", func() {
+			g.Specify("PUT request with a manifest with custom config/mediaType (as artifact type) [OCI-Image v1.1] should return 201", func() {
 				SkipIfDisabled(push)
 				Expect(lastResponse).ToNot(BeNil())
 
@@ -478,7 +478,7 @@ var test02Push = func() {
 		})
 
 		g.Context("Manifest Upload with custom Layer MediaType", func() {
-			g.Specify("Registry should accept custom Layer MediaType", func() {
+			g.Specify("PUT request with a manifest with custom Layer MediaType should return 201", func() {
 				SkipIfDisabled(push)
 
 				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
@@ -494,7 +494,7 @@ var test02Push = func() {
 		})
 
 		g.Context("Manifest Upload with custom artifactType", func() {
-			g.Specify("Registry should accept a manifest upload with custom artifactType [OCI-Image v1.1]", func() {
+			g.Specify("PUT request with a manifest with custom artifactType [OCI-Image v1.1] should return 201", func() {
 				SkipIfDisabled(push)
 
 				// Populate registry with empty JSON blob
@@ -527,7 +527,7 @@ var test02Push = func() {
 		})
 
 		g.Context("Manifest Upload with annotations", func() {
-			g.Specify("Registry should accept annotations", func() {
+			g.Specify("PUT request with a manifest with annotations should return 201", func() {
 				SkipIfDisabled(push)
 				supportAnnotation = false
 
@@ -547,7 +547,7 @@ var test02Push = func() {
 		})
 
 		g.Context("Manifest Upload with 4MB", func() {
-			g.Specify("Registry should accept at least 4MB manifest", func() {
+			g.Specify("PUT request with a 4MB manifest should return 201", func() {
 				SkipIfDisabled(push)
 				Expect(aResponse).ToNot(BeNil())
 
@@ -586,7 +586,7 @@ var test02Push = func() {
 		for i, t := range testMediaTypes {
 			index := i
 			g.Context(fmt.Sprintf("Manifest Upload with Layer MediaType: %s", t), func() {
-				g.Specify(fmt.Sprintf("Registry should accept Layer MediaType: %s", t), func() {
+				g.Specify(fmt.Sprintf("Put request with a manifest with Layer MediaType: %s should return 201", t), func() {
 					SkipIfDisabled(push)
 					m := testTarManifestContent[index]
 					d := testTarDigest[index]
@@ -604,7 +604,7 @@ var test02Push = func() {
 		}
 
 		g.Context("Manifest Upload with subject", func() {
-			g.Specify("Registry should accept a manifest with subject [OCI-Image v1.1]", func() {
+			g.Specify("PUT request with a manifest with subject [OCI-Image v1.1] should return 201", func() {
 				SkipIfDisabled(push)
 				Expect(aResponse).ToNot(BeNil())
 				supportSubject = false
@@ -666,7 +666,7 @@ var test02Push = func() {
 		})
 
 		g.Context("Index Upload", func() {
-			g.Specify("Registry should accept a manifest upload with image index", func() {
+			g.Specify("PUT request with a manifest with image index should return 201", func() {
 				SkipIfDisabled(push)
 
 				// Populate registry with test blob
@@ -712,7 +712,7 @@ var test02Push = func() {
 					BeNumerically("<", 300)), getErrorsInfo(resp))
 			})
 
-			g.Specify("Registry should accept nested indexes [OCI-Image v1.1]", func() {
+			g.Specify("PUT request with nested indexes [OCI-Image v1.1] should return 201", func() {
 				SkipIfDisabled(push)
 
 				// Populate registry with test index

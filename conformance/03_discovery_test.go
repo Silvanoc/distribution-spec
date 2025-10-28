@@ -324,7 +324,7 @@ var test03ContentDiscovery = func() {
 		})
 
 		g.Context("Manifest copy the annotations of the subject", func() {
-			g.Specify("Registry should copy the annotations of the subject", func() {
+			g.Specify("Manifests in the referrers list should contain the annotations of the subject", func() {
 				SkipIfDisabled(contentDiscovery)
 				if !supportAnnotation || !supportSubject {
 					SkipIfDisabled(0)
