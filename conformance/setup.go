@@ -670,8 +670,11 @@ func init() {
 		Layers: layers,
 		Subject: &descriptor{
 			MediaType: "application/vnd.oci.image.manifest.v1+json",
-			Size:      int64(len(testManifestAnnotationContent)),
-			Digest:    godigest.FromBytes(testManifestAnnotationContent),
+			Size:      int64(len(manifests[4].Content)),
+			Digest:    godigest.FromBytes(manifests[4].Content),
+		},
+		Annotations: map[string]string{
+			testAnnotationKey: "test copying of annotation",
 		},
 	}
 	refsManifestCopyAnnotationContent, err = json.MarshalIndent(&refsManifestCopyAnnotation, "", "\t")
@@ -679,6 +682,7 @@ func init() {
 		log.Fatal(err)
 	}
 	refsManifestCopyAnnotationDigest = godigest.FromBytes(refsManifestCopyAnnotationContent).String()
+	testAnnotationValues[refsManifestCopyAnnotationDigest] = refsManifestCopyAnnotation.Annotations[testAnnotationKey]
 
 	// ManifestCLayerArtifact based on a subject that has not been pushed
 	refsManifestCLayerArtifact := manifest{

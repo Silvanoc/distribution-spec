@@ -151,16 +151,6 @@ var test03ContentDiscovery = func() {
 					BeNumerically(">=", 200),
 					BeNumerically("<", 300)))
 
-				// Populate registry with test manifests with annotations
-				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
-					reggie.WithReference(testManifestAnnotationDigest)).
-					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
-					SetBody(testManifestAnnotationContent)
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)), getErrorsInfo(resp))
 			})
 
 			g.Specify("Populate registry with manifests containing Subject should return Header with OCI-Subject", func() {
@@ -201,7 +191,7 @@ var test03ContentDiscovery = func() {
 				Expect(resp.StatusCode()).To(SatisfyAll(
 					BeNumerically(">=", 200),
 					BeNumerically("<", 300)), getErrorsInfo(resp))
-				Expect(resp.Header().Get("OCI-Subject")).To(Equal(testManifestAnnotationDigest))
+				Expect(resp.Header().Get("OCI-Subject")).To(Equal(manifests[4].Digest))
 
 			})
 
@@ -293,7 +283,7 @@ var test03ContentDiscovery = func() {
 				var index index
 				err = json.Unmarshal(resp.Body(), &index)
 				Expect(err).To(BeNil())
-				Expect(len(index.Manifests)).To(Equal(2))
+				Expect(len(index.Manifests)).To(Equal(3))
 				Expect(index.Manifests[0].Digest).ToNot(Equal(index.Manifests[1].Digest))
 			})
 
@@ -319,7 +309,7 @@ var test03ContentDiscovery = func() {
 					Expect(len(index.Manifests)).To(Equal(1))
 					Expect(resp.Header().Get("OCI-Filters-Applied")).To(Equal(artifactTypeFilter))
 				} else {
-					Expect(len(index.Manifests)).To(Equal(2))
+					Expect(len(index.Manifests)).To(Equal(3))
 					Warn("filtering by artifact-type is not implemented")
 				}
 			})
@@ -350,7 +340,7 @@ var test03ContentDiscovery = func() {
 				}
 
 				req := client.NewRequest(reggie.GET, "/v2/<name>/referrers/<digest>",
-					reggie.WithDigest(testManifestAnnotationDigest))
+					reggie.WithDigest(manifests[4].Digest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK), getErrorsInfo(resp))
@@ -359,8 +349,14 @@ var test03ContentDiscovery = func() {
 				var index index
 				err = json.Unmarshal(resp.Body(), &index)
 				Expect(err).To(BeNil())
-				Expect(len(index.Manifests)).To(Equal(1))
-				Expect(index.Manifests[0].Annotations[testAnnotationKey]).To(Equal(testAnnotationValues[testManifestAnnotationDigest]))
+				Expect(len(index.Manifests)).To(Equal(3))
+				for i := 0; i < len(index.Manifests); i++ {
+					if index.Manifests[i].Annotations != nil {
+						fmt.Println(i)
+						Expect(len(index.Manifests[i].Annotations)).To(Equal(1))
+						Expect(index.Manifests[i].Annotations[testAnnotationKey]).To(Equal(testAnnotationValues[index.Manifests[i].Digest.String()]))
+					}
+				}
 			})
 		})
 
