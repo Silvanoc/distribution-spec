@@ -161,7 +161,7 @@ var test04ContentManagement = func() {
 					Equal(http.StatusAccepted),
 					Equal(http.StatusNotFound),
 					Equal(http.StatusMethodNotAllowed),
-				))
+				), getErrorsInfo(resp))
 				// layer blob
 				req = client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(layerBlobDigest))
 				resp, err = client.Do(req)
@@ -171,7 +171,7 @@ var test04ContentManagement = func() {
 					Equal(http.StatusAccepted),
 					Equal(http.StatusNotFound),
 					Equal(http.StatusMethodNotAllowed),
-				))
+				), getErrorsInfo(resp))
 				if resp.StatusCode() == http.StatusMethodNotAllowed {
 					blobDeleteAllowed = false
 				}
@@ -184,7 +184,7 @@ var test04ContentManagement = func() {
 				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[3].Digest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
+				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound), getErrorsInfo(resp))
 			})
 		})
 

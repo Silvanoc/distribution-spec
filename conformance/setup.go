@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 
 	"github.com/bloodorangeio/reggie"
 	"github.com/google/uuid"
@@ -835,4 +836,40 @@ func setupChunkedBlob(size int) {
 	testBlobBChunk2 = testBlobB[size/2+1:]
 	testBlobBChunk2Length = strconv.Itoa(len(testBlobBChunk2))
 	testBlobBChunk2Range = fmt.Sprintf("%d-%d", len(testBlobBChunk1), len(testBlobB)-1)
+}
+
+func getErrorsInfo(resp *reggie.Response) string {
+	if len(resp.String()) == 0 {
+		return ""
+	}
+
+	// Create a decoder from the JSON string
+	decoder := json.NewDecoder(bytes.NewReader(resp.Body()))
+
+	// Decode the JSON into a map[string]interface{}
+	var result map[string]any
+	err := decoder.Decode(&result)
+	if err != nil {
+		// if response body up to 199 characters, show it complete
+		if len(resp.Body()) < 200 {
+			return fmt.Sprintf("Response body is not JSON (possibly not expected to be): %s\n", resp.Body())
+		// response body from 200 characters upwards are too long to be completely shown
+		} else {
+			return fmt.Sprintf("Response body is not JSON (possibly not expected to be): %s [...]\n", resp.Body()[:199])
+		}
+	}
+
+	errorsInfo, err := resp.Errors()
+	if err != nil {
+		return fmt.Sprintf("Response body is not an Errors JSON (possibly not expected to be): %s\n", resp.Body())
+	}
+	errorsMsg := []string{}
+	for _, err := range errorsInfo {
+		errMsg := err.Message
+		if err.Detail != nil {
+			errMsg = fmt.Sprintf("%s: %s", errMsg, err.Detail)
+		}
+		errorsMsg = append(errorsMsg, errMsg)
+	}
+	return strings.Join(errorsMsg, "; ")
 }

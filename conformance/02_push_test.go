@@ -1,55 +1,16 @@
 package conformance
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 
-	"bytes"
 	"strconv"
-	"strings"
 
 	"github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	godigest "github.com/opencontainers/go-digest"
 )
-
-func getErrorsInfo(resp *reggie.Response) string {
-	if len(resp.String()) == 0 {
-		return ""
-	}
-
-	// Create a decoder from the JSON string
-	decoder := json.NewDecoder(bytes.NewReader(resp.Body()))
-
-	// Decode the JSON into a map[string]interface{}
-	var result map[string]any
-	err := decoder.Decode(&result)
-	if err != nil {
-		// if response body up to 199 characters, show it complete
-		if len(resp.Body()) < 200 {
-			return fmt.Sprintf("Response body is not JSON (possibly not expected to be): %s\n", resp.Body())
-		// response body from 200 characters upwards are too long to be completely shown
-		} else {
-			return fmt.Sprintf("Response body is not JSON (possibly not expected to be): %s [...]\n", resp.Body()[:199])
-		}
-	}
-
-	errorsInfo, err := resp.Errors()
-	if err != nil {
-		return fmt.Sprintf("Response body is not an Errors JSON (possibly not expected to be): %s\n", resp.Body())
-	}
-	errorsMsg := []string{}
-	for _, err := range errorsInfo {
-		errMsg := err.Message
-		if err.Detail != nil {
-			errMsg = fmt.Sprintf("%s: %s", errMsg, err.Detail)
-		}
-		errorsMsg = append(errorsMsg, errMsg)
-	}
-	return strings.Join(errorsMsg, "; ")
-}
 
 var test02Push = func() {
 	g.Context(titlePush, func() {
@@ -373,7 +334,7 @@ var test02Push = func() {
 					reggie.WithReference(nonexistentManifest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
+				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound), getErrorsInfo(resp))
 			})
 
 			g.Specify("PUT should accept a manifest upload", func() {

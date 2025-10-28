@@ -216,7 +216,7 @@ var test03ContentDiscovery = func() {
 				req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK), getErrorsInfo(resp))
 				tagList = getTagList(resp)
 				numTags = len(tagList)
 				// If the list is not empty, the tags MUST be in lexical order (i.e. case-insensitive alphanumeric order).
@@ -237,7 +237,7 @@ var test03ContentDiscovery = func() {
 					SetQueryParam("n", strconv.Itoa(numResults))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK), getErrorsInfo(resp))
 				tagList = getTagList(resp)
 				Expect(len(tagList)).To(Equal(numResults))
 			})
@@ -257,7 +257,7 @@ var test03ContentDiscovery = func() {
 					SetQueryParam("last", tagList[numResults-1])
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK), getErrorsInfo(resp))
 				tagList = getTagList(resp)
 				Expect(len(tagList)).To(BeNumerically("<=", numResults))
 				Expect(tagList).ToNot(ContainElement(last))
@@ -272,7 +272,7 @@ var test03ContentDiscovery = func() {
 					reggie.WithDigest(manifests[4].Digest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK), getErrorsInfo(resp))
 				Expect(resp.Header().Get("Content-Type")).To(Equal("application/vnd.oci.image.index.v1+json"))
 
 				var index index
@@ -289,7 +289,7 @@ var test03ContentDiscovery = func() {
 					SetQueryParam("artifactType", "application/vnd.oci.descriptor.v1+json")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK), getErrorsInfo(resp))
 				Expect(resp.Header().Get("Content-Type")).To(Equal("application/vnd.oci.image.index.v1+json"))
 
 				var index index
@@ -312,7 +312,7 @@ var test03ContentDiscovery = func() {
 					reggie.WithDigest(manifests[3].Digest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK), getErrorsInfo(resp))
 				Expect(resp.Header().Get("Content-Type")).To(Equal("application/vnd.oci.image.index.v1+json"))
 
 				var index index
@@ -334,7 +334,7 @@ var test03ContentDiscovery = func() {
 					reggie.WithDigest(testManifestAnnotationDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK), getErrorsInfo(resp))
 				Expect(resp.Header().Get("Content-Type")).To(Equal("application/vnd.oci.image.index.v1+json"))
 
 				var index index
