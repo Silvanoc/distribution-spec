@@ -474,7 +474,7 @@ func init() {
 	testManifestArtifactType := manifest{
 		SchemaVersion: 2,
 		MediaType:     "application/vnd.oci.image.manifest.v1+json",
-		ArtifactType:  testRefArtifactTypeA,
+		ArtifactType:  testRefArtifactTypeB,
 		Config: descriptor{
 			MediaType: "application/vnd.oci.image.manifest.v1+json",
 			Size:      int64(len(testRefBlobA)),
@@ -688,8 +688,11 @@ func init() {
 	refsManifestCLayerArtifact := manifest{
 		SchemaVersion: 2,
 		MediaType:     "application/vnd.oci.image.manifest.v1+json",
-		ArtifactType:  testRefArtifactTypeB,
-		Config:        emptyJSONDescriptor,
+		Config: descriptor{
+			MediaType: "application/vnd.oci.image.config.v1+json",
+			Digest:    godigest.Digest(configs[0].Digest),
+			Size:      int64(len(configs[0].Content)),
+		},
 		Subject: &descriptor{
 			MediaType: "application/vnd.oci.image.manifest.v1+json",
 			Size:      int64(len(manifests[3].Content)),
