@@ -69,6 +69,20 @@ var test04ContentManagement = func() {
 					BeNumerically("<", 300)))
 			})
 
+			g.Specify("Populate registry with test digest", func() {
+				SkipIfDisabled(contentManagement)
+				RunOnlyIf(runContentManagementSetup)
+				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(manifests[0].Digest)).
+					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+					SetBody(manifests[0].Content)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)))
+			})
+
 			g.Specify("Check how many tags there are before anything gets deleted", func() {
 				SkipIfDisabled(contentManagement)
 				RunOnlyIf(runContentManagementSetup)
@@ -85,45 +99,25 @@ var test04ContentManagement = func() {
 		})
 
 		g.Context("Manifest delete", func() {
-			g.Specify("DELETE request to manifest tag should return 202, unless tag deletion is disallowed (400/405)", func() {
+			g.Specify("DELETE request to manifest tag should return 202", func() {
 				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(tagToDelete))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAny(
-					Equal(http.StatusBadRequest),
+				Expect(resp.StatusCode()).To(
 					Equal(http.StatusAccepted),
-					Equal(http.StatusMethodNotAllowed)))
-				if resp.StatusCode() == http.StatusBadRequest {
-					errorResponses, err := resp.Errors()
-					Expect(err).To(BeNil())
-					Expect(errorResponses).ToNot(BeEmpty())
-					Expect(errorResponses[0].Code).To(Equal(errorCodes[UNSUPPORTED]))
-				}
+					getErrorsInfo(resp))
 			})
 
-			g.Specify("DELETE request to manifest (digest) should yield 202 response unless already deleted", func() {
+			g.Specify("DELETE request to manifest (digest) should return 202", func() {
 				SkipIfDisabled(contentManagement)
-				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[3].Digest))
+				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[0].Digest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				// In the case that the previous request was accepted, this may or may not fail (which is ok)
-				Expect(resp.StatusCode()).To(SatisfyAny(
+				Expect(resp.StatusCode()).To(
 					Equal(http.StatusAccepted),
-					Equal(http.StatusNotFound),
-				))
-			})
-
-			g.Specify("GET request to deleted manifest URL should yield 404 response, unless delete is disallowed", func() {
-				SkipIfDisabled(contentManagement)
-				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[3].Digest))
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAny(
-					Equal(http.StatusNotFound),
-					Equal(http.StatusOK),
-				))
+					getErrorsInfo(resp))
 			})
 
 			g.Specify("GET request to tags list should reflect manifest deletion", func() {
@@ -134,7 +128,7 @@ var test04ContentManagement = func() {
 				Expect(resp.StatusCode()).To(SatisfyAny(
 					Equal(http.StatusNotFound),
 					Equal(http.StatusOK),
-				))
+				), getErrorsInfo(resp))
 				expectTags := numTags - 1
 				if resp.StatusCode() == http.StatusOK {
 					tagList := &TagList{}
@@ -150,31 +144,34 @@ var test04ContentManagement = func() {
 		})
 
 		g.Context("Blob delete", func() {
-			g.Specify("DELETE request to blob URL should yield 202 response", func() {
+			g.Specify("DELETE request to config blob URL should yield 202 response", func() {
 				SkipIfDisabled(contentManagement)
 				RunOnlyIf(runContentManagementSetup)
 				// config blob
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[3].Digest))
 				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAny(
-					Equal(http.StatusAccepted),
-					Equal(http.StatusNotFound),
-					Equal(http.StatusMethodNotAllowed),
-				))
-				// layer blob
-				req = client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(layerBlobDigest))
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAny(
-					Equal(http.StatusAccepted),
-					Equal(http.StatusNotFound),
-					Equal(http.StatusMethodNotAllowed),
-				))
-				if resp.StatusCode() == http.StatusMethodNotAllowed {
+				if resp.StatusCode() != http.StatusAccepted || err != nil {
 					blobDeleteAllowed = false
 				}
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(
+					Equal(http.StatusAccepted),
+					getErrorsInfo(resp))
+			})
+
+			g.Specify("DELETE request to layer blob URL should yield 202 response", func() {
+				SkipIfDisabled(contentManagement)
+				RunOnlyIf(runContentManagementSetup)
+				// layer blob
+				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(layerBlobDigest))
+				resp, err := client.Do(req)
+				if resp.StatusCode() != http.StatusAccepted || err != nil {
+					blobDeleteAllowed = false
+				}
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(
+					Equal(http.StatusAccepted),
+					getErrorsInfo(resp))
 			})
 
 			g.Specify("GET request to deleted blob URL should yield 404 response", func() {
@@ -184,7 +181,7 @@ var test04ContentManagement = func() {
 				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[3].Digest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
+				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound), getErrorsInfo(resp))
 			})
 		})
 

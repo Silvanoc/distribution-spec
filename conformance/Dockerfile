@@ -10,7 +10,15 @@ ADD . .
 RUN CGO_ENABLED=0 go test -c -o /conformance.test --ldflags="-X ${GO_PKG}.Version=${VERSION}"
 
 # ---
-# Stage 2: Final image with nothing but certs & binary
+# Stage 2.1: Final image for debugging with alpine base
+# ---
+FROM docker.io/alpine:3.17 AS debug
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=builder /conformance.test /conformance.test
+ENTRYPOINT ["/bin/sh"]
+
+# ---
+# Stage 2.2: Final image with nothing but certs & binary
 # ---
 FROM scratch AS final
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt

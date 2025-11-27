@@ -1,6 +1,7 @@
 package conformance
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 
@@ -115,7 +116,7 @@ var test01Pull = func() {
 					reggie.WithDigest(dummyDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
+				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound), getErrorsInfo(resp))
 			})
 
 			g.Specify("HEAD request to existing blob should yield 200", func() {
@@ -124,7 +125,22 @@ var test01Pull = func() {
 					reggie.WithDigest(configs[0].Digest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK), getErrorsInfo(resp))
+				if h := resp.Header().Get("Docker-Content-Digest"); h != "" {
+					Expect(h).To(Equal(configs[0].Digest))
+				}
+			})
+
+			g.Specify("HEAD request to existing blob with Range Header should yield 200", func() {
+				SkipIfDisabled(pull)
+				startByte := 0
+				endByte := 4
+				req := client.NewRequest(reggie.HEAD, "/v2/<name>/blobs/<digest>",
+					reggie.WithDigest(configs[0].Digest)).
+					SetHeader("Range", fmt.Sprintf("bytes=%d-%d", startByte, endByte))
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK), getErrorsInfo(resp))
 				if h := resp.Header().Get("Docker-Content-Digest"); h != "" {
 					Expect(h).To(Equal(configs[0].Digest))
 				}
@@ -136,7 +152,7 @@ var test01Pull = func() {
 					reggie.WithDigest(dummyDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
+				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound), getErrorsInfo(resp))
 			})
 
 			g.Specify("GET request to existing blob URL should yield 200", func() {
@@ -144,7 +160,7 @@ var test01Pull = func() {
 				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[0].Digest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK), getErrorsInfo(resp))
 			})
 		})
 
@@ -155,7 +171,7 @@ var test01Pull = func() {
 					reggie.WithReference(nonexistentManifest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
+				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound), getErrorsInfo(resp))
 			})
 
 			g.Specify("HEAD request to manifest[0] path (digest) should yield 200 response", func() {
@@ -164,7 +180,7 @@ var test01Pull = func() {
 					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK), getErrorsInfo(resp))
 				if h := resp.Header().Get("Docker-Content-Digest"); h != "" {
 					Expect(h).To(Equal(manifests[0].Digest))
 				}
@@ -176,7 +192,7 @@ var test01Pull = func() {
 					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK), getErrorsInfo(resp))
 				if h := resp.Header().Get("Docker-Content-Digest"); h != "" {
 					Expect(h).To(Equal(manifests[1].Digest))
 				}
@@ -189,7 +205,7 @@ var test01Pull = func() {
 					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK), getErrorsInfo(resp))
 				if h := resp.Header().Get("Docker-Content-Digest"); h != "" {
 					Expect(h).To(Equal(manifests[0].Digest))
 				}
@@ -201,7 +217,7 @@ var test01Pull = func() {
 					reggie.WithReference(nonexistentManifest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
+				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound), getErrorsInfo(resp))
 			})
 
 			g.Specify("GET request to manifest[0] path (digest) should yield 200 response", func() {
@@ -210,7 +226,7 @@ var test01Pull = func() {
 					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK), getErrorsInfo(resp))
 			})
 
 			g.Specify("GET request to manifest[1] path (digest) should yield 200 response", func() {
@@ -219,7 +235,7 @@ var test01Pull = func() {
 					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK), getErrorsInfo(resp))
 			})
 
 			g.Specify("GET request to manifest path (tag) should yield 200 response", func() {
@@ -229,7 +245,7 @@ var test01Pull = func() {
 					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK), getErrorsInfo(resp))
 			})
 		})
 
