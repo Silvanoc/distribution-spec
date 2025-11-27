@@ -705,6 +705,7 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	refsManifestCLayerArtifactDigest = godigest.FromBytes(refsManifestCLayerArtifactContent).String()
 
 	dummyDigest = godigest.FromString("hello world").String()
 
