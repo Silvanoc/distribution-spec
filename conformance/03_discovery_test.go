@@ -195,7 +195,7 @@ var test03ContentDiscovery = func() {
 
 			})
 
-			g.Specify("Populate registry with test references manifest to a non-existent subject", func() {
+			g.Specify("Populate registry with manifest referring to a non-existent subject", func() {
 				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(refsManifestCLayerArtifactDigest)).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
