@@ -13,6 +13,7 @@ var test01Pull = func() {
 	g.Context(titlePull, func() {
 
 		var tag string
+		var manifestRefs []string
 
 		g.Context("Setup", func() {
 			g.Specify("Populate registry with test blob", func() {
@@ -73,29 +74,25 @@ var test01Pull = func() {
 				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
 				tag = testTagName
-				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
-					reggie.WithReference(tag)).
-					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
-					SetBody(manifests[0].Content)
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
+				manifestRefs = pushManifest(
+					&ManifestInfo{
+						Tag:     tag,
+						Digest:  manifests[0].Digest,
+						Content: manifests[0].Content},
+					manifestRefs, g.GinkgoT(),
+				)
 			})
 
 			g.Specify("Populate registry with test manifest", func() {
 				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
-				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
-					reggie.WithReference(manifests[1].Digest)).
-					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
-					SetBody(manifests[1].Content)
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
+				manifestRefs = pushManifest(
+					&ManifestInfo{
+						Digest:  manifests[1].Digest,
+						Content: manifests[1].Content,
+					},
+					manifestRefs, g.GinkgoT(),
+				)
 			})
 
 			g.Specify("Get tag name from environment", func() {
@@ -257,33 +254,10 @@ var test01Pull = func() {
 
 		g.Context("Teardown", func() {
 			if deleteManifestBeforeBlobs {
-				g.Specify("Delete manifest[0] created in setup", func() {
+				g.Specify("Delete manifests created in setup", func() {
 					SkipIfDisabled(pull)
 					RunOnlyIf(runPullSetup)
-					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[0].Digest))
-					resp, err := client.Do(req)
-					Expect(err).To(BeNil())
-					Expect(resp.StatusCode()).To(SatisfyAny(
-						SatisfyAll(
-							BeNumerically(">=", 200),
-							BeNumerically("<", 300),
-						),
-						Equal(http.StatusMethodNotAllowed),
-					))
-				})
-				g.Specify("Delete manifest[1] created in setup", func() {
-					SkipIfDisabled(pull)
-					RunOnlyIf(runPullSetup)
-					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[1].Digest))
-					resp, err := client.Do(req)
-					Expect(err).To(BeNil())
-					Expect(resp.StatusCode()).To(SatisfyAny(
-						SatisfyAll(
-							BeNumerically(">=", 200),
-							BeNumerically("<", 300),
-						),
-						Equal(http.StatusMethodNotAllowed),
-					))
+					deleteManifests(manifestRefs, g.GinkgoT())
 				})
 			}
 
@@ -335,33 +309,10 @@ var test01Pull = func() {
 			})
 
 			if !deleteManifestBeforeBlobs {
-				g.Specify("Delete manifest[0] created in setup", func() {
+				g.Specify("Delete manifests created in setup", func() {
 					SkipIfDisabled(pull)
 					RunOnlyIf(runPullSetup)
-					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[0].Digest))
-					resp, err := client.Do(req)
-					Expect(err).To(BeNil())
-					Expect(resp.StatusCode()).To(SatisfyAny(
-						SatisfyAll(
-							BeNumerically(">=", 200),
-							BeNumerically("<", 300),
-						),
-						Equal(http.StatusMethodNotAllowed),
-					))
-				})
-				g.Specify("Delete manifest[1] created in setup", func() {
-					SkipIfDisabled(pull)
-					RunOnlyIf(runPullSetup)
-					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[1].Digest))
-					resp, err := client.Do(req)
-					Expect(err).To(BeNil())
-					Expect(resp.StatusCode()).To(SatisfyAny(
-						SatisfyAll(
-							BeNumerically(">=", 200),
-							BeNumerically("<", 300),
-						),
-						Equal(http.StatusMethodNotAllowed),
-					))
+					deleteManifests(manifestRefs, g.GinkgoT())
 				})
 			}
 		})

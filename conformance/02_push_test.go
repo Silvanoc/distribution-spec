@@ -15,7 +15,7 @@ var test02Push = func() {
 	g.Context(titlePush, func() {
 
 		var lastResponse, prevResponse *reggie.Response
-		var emptyLayerManifestRef string
+		var manifestRefs []string
 
 		g.Context("Setup", func() {
 			// No setup required at this time for push tests
@@ -340,15 +340,14 @@ var test02Push = func() {
 				SkipIfDisabled(push)
 				for i := 0; i < 4; i++ {
 					tag := fmt.Sprintf("test%d", i)
-					req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
-						reggie.WithReference(tag)).
-						SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
-						SetBody(manifests[1].Content)
-					resp, err := client.Do(req)
-					Expect(err).To(BeNil())
-					location := resp.Header().Get("Location")
-					Expect(location).ToNot(BeEmpty())
-					Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+					manifestRefs = pushManifest(
+						&ManifestInfo{
+							Tag:     tag,
+							Digest:  manifests[1].Digest,
+							Content: manifests[1].Content,
+						},
+						manifestRefs, g.GinkgoT(),
+					)
 				}
 			})
 
@@ -362,9 +361,10 @@ var test02Push = func() {
 				Expect(err).To(BeNil())
 				if resp.StatusCode() == http.StatusCreated {
 					location := resp.Header().Get("Location")
-					emptyLayerManifestRef = location
 					Expect(location).ToNot(BeEmpty())
 					Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+					manifestRefs = append(manifestRefs, emptyLayerTestTag)
+					manifestRefs = append(manifestRefs, emptyLayerManifestDigest)
 				} else {
 					Warn("image manifest with no layers is not supported")
 				}
@@ -385,28 +385,7 @@ var test02Push = func() {
 				g.Specify("Delete manifest created in tests", func() {
 					SkipIfDisabled(push)
 					RunOnlyIf(runPushSetup)
-					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[1].Digest))
-					resp, err := client.Do(req)
-					Expect(err).To(BeNil())
-					Expect(resp.StatusCode()).To(SatisfyAny(
-						SatisfyAll(
-							BeNumerically(">=", 200),
-							BeNumerically("<", 300),
-						),
-						Equal(http.StatusMethodNotAllowed),
-					))
-					if emptyLayerManifestRef != "" {
-						req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>", reggie.WithReference(emptyLayerManifestDigest))
-						resp, err = client.Do(req)
-						Expect(err).To(BeNil())
-						Expect(resp.StatusCode()).To(SatisfyAny(
-							SatisfyAll(
-								BeNumerically(">=", 200),
-								BeNumerically("<", 300),
-							),
-							Equal(http.StatusMethodNotAllowed),
-						))
-					}
+					deleteManifests(manifestRefs, g.GinkgoT())
 				})
 			}
 
@@ -446,28 +425,7 @@ var test02Push = func() {
 				g.Specify("Delete manifest created in tests", func() {
 					SkipIfDisabled(push)
 					RunOnlyIf(runPushSetup)
-					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[1].Digest))
-					resp, err := client.Do(req)
-					Expect(err).To(BeNil())
-					Expect(resp.StatusCode()).To(SatisfyAny(
-						SatisfyAll(
-							BeNumerically(">=", 200),
-							BeNumerically("<", 300),
-						),
-						Equal(http.StatusMethodNotAllowed),
-					))
-					if emptyLayerManifestRef != "" {
-						req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>", reggie.WithReference(emptyLayerManifestDigest))
-						resp, err = client.Do(req)
-						Expect(err).To(BeNil())
-						Expect(resp.StatusCode()).To(SatisfyAny(
-							SatisfyAll(
-								BeNumerically(">=", 200),
-								BeNumerically("<", 300),
-							),
-							Equal(http.StatusMethodNotAllowed),
-						))
-					}
+					deleteManifests(manifestRefs, g.GinkgoT())
 				})
 			}
 		})
