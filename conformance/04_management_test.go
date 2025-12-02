@@ -58,15 +58,7 @@ var test04ContentManagement = func() {
 				SkipIfDisabled(contentManagement)
 				RunOnlyIf(runContentManagementSetup)
 				tagToDelete = defaultTagName
-				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
-					reggie.WithReference(tagToDelete)).
-					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
-					SetBody(manifests[3].Content)
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
+				pushManifestByTag(tagToDelete, manifests[3].Digest, manifests[3].Content, nil)
 			})
 
 			g.Specify("Check how many tags there are before anything gets deleted", func() {

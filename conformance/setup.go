@@ -9,6 +9,7 @@ import (
 	"log"
 	"math/big"
 	mathrand "math/rand"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -18,6 +19,7 @@ import (
 	"github.com/google/uuid"
 	g "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/ginkgo/v2/formatter"
+	. "github.com/onsi/gomega"
 	godigest "github.com/opencontainers/go-digest"
 )
 
@@ -660,4 +662,104 @@ func setupChunkedBlob(size int) {
 	testBlobBChunk2 = testBlobB[size/2+1:]
 	testBlobBChunk2Length = strconv.Itoa(len(testBlobBChunk2))
 	testBlobBChunk2Range = fmt.Sprintf("%d-%d", len(testBlobBChunk1), len(testBlobB)-1)
+}
+
+func pushManifest(
+	index bool,
+	tag string,
+	manifestDigest string, manifestContent []byte,
+	manifestRefs []string,
+	subject string,
+) ([]string) {
+	// if tag passed, use it as reference, otherwise use digest
+	reference := tag
+	if reference == "" {
+		reference = manifestDigest
+	}
+	// if index, use corresponding mediaType
+	mediaType := "application/vnd.oci.image.manifest.v1+json"
+	if index {
+		mediaType = "application/vnd.oci.image.index.v1+json"
+	}
+	// push manifest
+	req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+		reggie.WithReference(reference)).
+		SetHeader("Content-Type", mediaType).
+		SetBody(manifestContent)
+	resp, err := client.Do(req)
+	// check all expectations
+	Expect(err).To(BeNil())
+	Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+	Expect(resp.Header().Get("Location")).ToNot(BeEmpty())
+	if subject != "" {
+		Expect(resp.Header().Get("OCI-Subject")).To(Equal(subject))
+	}
+	// keep track of all reference(s) to manifest
+	manifestRefs = append(manifestRefs, reference)
+	if tag != "" {
+		manifestRefs = append(manifestRefs, manifestDigest)
+	}
+	return manifestRefs
+}
+
+func pushManifestByDigest(
+	manifestDigest string, manifestContent []byte,
+	manifestRefs []string,
+) ([]string) {
+	return pushManifest(false, "", manifestDigest, manifestContent, manifestRefs, "")
+}
+
+func pushManifestByTag(
+	tag string,
+	manifestDigest string, manifestContent []byte,
+	manifestRefs []string,
+) ([]string) {
+	return pushManifest(false, tag, manifestDigest, manifestContent, manifestRefs, "")
+}
+
+func pushManifestByDigestWithSubject(
+	manifestDigest string, manifestContent []byte,
+	manifestRefs []string,
+	subject string,
+) ([]string) {
+	return pushManifest(false, "", manifestDigest, manifestContent, manifestRefs, subject)
+}
+
+func pushIndexByDigestWithSubject(
+	manifestDigest string, manifestContent []byte,
+	manifestRefs []string,
+	subject string,
+) ([]string) {
+	return pushManifest(true, "", manifestDigest, manifestContent, manifestRefs, subject)
+}
+
+func deleteManifests(manifestRefs []string) {
+	for len(manifestRefs) > 0 {
+		index := len(manifestRefs) - 1
+		ref := manifestRefs[index]
+		manifestRefs = manifestRefs[:index]
+		req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<reference>",
+			reggie.WithReference(ref))
+		resp, err := client.Do(req)
+		Expect(err).To(BeNil())
+		if resp.StatusCode() == http.StatusOK {
+			req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
+				reggie.WithReference(ref))
+			resp, err := client.Do(req)
+			Expect(err).To(BeNil())
+			Expect(resp.StatusCode()).To(SatisfyAny(
+				SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300),
+				),
+				Equal(http.StatusMethodNotAllowed),
+				Equal(http.StatusNotFound),
+			))
+			req = client.NewRequest(reggie.GET, "/v2/<name>/manifests/<ref>",
+				reggie.WithReference(ref))
+			resp, err = client.Do(req)
+			Expect(err).To(BeNil())
+			Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
+		}
+	}
 }
